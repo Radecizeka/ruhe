@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Ruhe — make your own calm</title>
+<meta name="description" content="Generate a unique, personalised calm soundscape — tuned to 432 Hz or your choice, composed in code, yours to keep.">
+<meta property="og:title" content="Ruhe — make your own calm">
+<meta property="og:description" content="A small quiet thing, generated just for you. Rain, ocean, fire, heartbeat and more — with music composed in code, tuned to your choice.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0b0d10">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Space+Mono:wght@400;700&display=swap">
 <style>
   :root{
@@ -215,6 +220,7 @@
     <div class="player">
       <button class="primary" id="playBtn">&#9654; Play</button>
       <button id="dlBtn">Download WAV</button>
+      <button id="shareBtn">Copy link</button>
     </div>
   </div>
 
@@ -259,6 +265,7 @@
   let REF = 432;                // active A4 reference
   let sampleBuffers = {};       // env -> array of decoded AudioBuffers (real ambience)
   let lastUsedSamples = false;  // whether the last render used real samples
+  let lastSeed = null;          // seed of the most recent soundscape (for share links)
 
   // ---------------- tuning ----------------
   const TUNINGS = { "432":432, "440":440, "528":528 };
@@ -766,6 +773,7 @@
 
   // seed input
   const seedInput = document.getElementById('seedInput');
+  const shareBtn = document.getElementById('shareBtn');
 
   function stopPlayback(){
     if(playSrc){ try{ playSrc.stop(); }catch(e){} playSrc = null; }
@@ -780,6 +788,7 @@
     // seed: use the typed value if valid, else a fresh random one
     const typed = parseInt(seedInput.value, 10);
     const seed = (typed > 0 ? typed : 1 + Math.floor(Math.random()*999999999));
+    lastSeed = seed;
     const mood = MOODS[opts.mood];
     // build a title from its own rng, independent of the render's rng
     const r = mulberry32(seed);
@@ -862,6 +871,54 @@
     setStatus('saved — it is yours now.');
   });
 
+  // ---- share link: encode the full state into the URL ----
+  function buildShareURL(seed){
+    const p = new URLSearchParams();
+    if(seed) p.set('s', seed);
+    p.set('mood', opts.mood);
+    p.set('env', opts.env);
+    p.set('tuning', opts.tuning);
+    p.set('len', opts.len);
+    p.set('music', Math.round(opts.musicVol*100));
+    p.set('amb', Math.round(opts.ambVol*100));
+    return location.origin + location.pathname + '?' + p.toString();
+  }
+
+  function copyText(text, done){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, ()=>{ setStatus('could not copy — long-press to copy the address bar instead.'); });
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); done(); }catch(e){ setStatus('could not copy — long-press to copy the address bar instead.'); }
+      document.body.removeChild(ta);
+    }
+  }
+
+  shareBtn.addEventListener('click', ()=>{
+    const seed = lastSeed || (parseInt(seedInput.value, 10) > 0 ? parseInt(seedInput.value, 10) : null);
+    const url = buildShareURL(seed);
+    copyText(url, ()=>{ setStatus('link copied — send it, they will hear the same piece.'); });
+  });
+
+  // ---- restore state from a shared link on load ----
+  function applyPill(k, v){
+    const b = document.querySelector('.pill[data-k="'+k+'"][data-v="'+v+'"]');
+    if(b) b.click();
+  }
+  function restoreFromURL(){
+    const q = new URLSearchParams(location.search);
+    if(!q.toString()) return;
+    if(q.has('mood')) applyPill('mood', q.get('mood'));
+    if(q.has('env')) applyPill('env', q.get('env'));
+    if(q.has('tuning')) applyPill('tuning', q.get('tuning'));
+    if(q.has('len')) applyPill('len', q.get('len'));
+    if(q.has('music')){ const v = parseInt(q.get('music'),10); if(v>=0 && v<=100){ opts.musicVol = v/100; musicVolEl.value = v; } }
+    if(q.has('amb')){ const v = parseInt(q.get('amb'),10); if(v>=0 && v<=100){ opts.ambVol = v/100; ambVolEl.value = v; } }
+    if(q.has('s')){ seedInput.value = q.get('s'); make(); }
+  }
+
   makeBtn.addEventListener('click', make);
 
   // ---- support buttons: show only the ones with a link filled in ----
@@ -877,6 +934,7 @@
   else supportHint.textContent = 'Payment links coming soon.';
 
   setStatus('ready — choose a mood and make something quiet.');
+  restoreFromURL();
 })();
 </script>
 </body>

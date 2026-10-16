@@ -765,6 +765,37 @@
     setStatus('cleared all recordings.');
   });
 
+  // ---- auto-load bundled recordings (samples.json manifest) ----
+  // A samples.json file next to the app maps each environment to a list of
+  // audio files. On load we fetch + decode them, so genuine recordings play
+  // by default — no visitor action needed. Missing manifest = silent fallback
+  // to synthesised ambience.
+  async function loadBundledSamples(){
+    try{
+      const res = await fetch('samples.json', { cache:'no-store' });
+      if(!res.ok) return false;
+      const manifest = await res.json();
+      const ctx = ensureLiveCtx();
+      let loaded = 0;
+      for(const env of Object.keys(manifest)){
+        const files = manifest[env] || [];
+        for(const path of files){
+          try{
+            const r = await fetch(path, { cache:'no-store' });
+            if(!r.ok) continue;
+            const ab = await r.arrayBuffer();
+            const buf = await ctx.decodeAudioData(ab);
+            (sampleBuffers[env] = sampleBuffers[env] || []).push(buf);
+            loaded++;
+          }catch(e){ /* skip unreadable file */ }
+        }
+      }
+      updateAmbStatus();
+      if(loaded) setStatus('real recordings loaded (' + loaded + ').');
+      return loaded > 0;
+    }catch(e){ return false; }
+  }
+
   // mix sliders
   const musicVolEl = document.getElementById('musicVol');
   const ambVolEl = document.getElementById('ambVol');
@@ -934,6 +965,7 @@
   else supportHint.textContent = 'Payment links coming soon.';
 
   setStatus('ready — choose a mood and make something quiet.');
+  loadBundledSamples();
   restoreFromURL();
 })();
 </script>

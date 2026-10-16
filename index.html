@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Ruhe — make your own calm</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Space+Mono:wght@400;700&display=swap">
+<style>
+  :root{
+    color-scheme:dark;
+    --ink:#0b0d10;
+    --paper:#e9e4d6;
+    --signal:#f78f44;
+    --amber:#f5b24d;
+    --muted:#8b877b;
+    --line: rgba(233,228,214,0.12);
+    --panel: rgba(20,22,26,0.7);
+  }
+  *{box-sizing:border-box;}
+  html,body{ margin:0; padding:0; min-height:100%; }
+  body{
+    background:
+      radial-gradient(1200px 700px at 50% -10%, rgba(247,143,68,0.08), transparent 60%),
+      radial-gradient(900px 600px at 85% 110%, rgba(245,178,77,0.06), transparent 55%),
+      var(--ink);
+    color: var(--paper);
+    font-family:'Space Mono', ui-monospace, Menlo, Consolas, monospace;
+    display:flex; justify-content:center;
+    padding: 32px 16px 60px;
+  }
+  .wrap{ width:100%; max-width:560px; }
+
+  header{ margin-bottom: 22px; }
+  header h1{
+    font-family:'Fraunces', Georgia, serif; font-style:italic; font-weight:600;
+    font-size: clamp(2rem, 7vw, 2.7rem); margin:0; letter-spacing:0.01em;
+  }
+  header .tagline{ color: var(--muted); font-size:0.72rem; letter-spacing:0.04em; margin-top:6px; }
+
+  .card{
+    background: var(--panel);
+    border:1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 16px;
+    margin-bottom: 14px;
+  }
+  .card h2{
+    font-size:0.62rem; letter-spacing:0.16em; text-transform:uppercase;
+    color: var(--amber); margin:0 0 10px; font-weight:400;
+  }
+  .row{ display:flex; flex-wrap:wrap; gap:7px; }
+  .pill{
+    font-family:inherit; font-size:0.72rem; letter-spacing:0.03em;
+    background:transparent; color:var(--paper);
+    border:1px solid var(--line); border-radius: 20px;
+    padding: 7px 12px; cursor:pointer;
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .pill:hover{ border-color: var(--signal); }
+  .pill.active{ background: var(--signal); border-color: var(--signal); color:#100b0a; font-weight:700; }
+
+  .make{
+    width:100%; border:none; border-radius: 14px;
+    padding: 18px; font-family:inherit; font-size:1rem; font-weight:700;
+    letter-spacing:0.02em; cursor:pointer;
+    background: var(--signal); color:#100b0a;
+    box-shadow: 0 8px 28px rgba(247,143,68,0.28);
+    transition: transform .12s ease, opacity .2s ease;
+  }
+  .make:active{ transform: scale(0.985); }
+  .make:disabled{ opacity:0.5; cursor:wait; }
+
+  .result{ display:none; margin-top: 18px; }
+  .result.show{ display:block; }
+  .now{
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    border-bottom:1px solid var(--line); padding-bottom: 14px;
+  }
+  .now .title{ font-family:'Fraunces', Georgia, serif; font-style:italic; font-weight:600; font-size:1.4rem; }
+  .now .meta{ color: var(--muted); font-size:0.68rem; letter-spacing:0.06em; text-align:right; line-height:1.7; }
+
+  .player{ display:flex; gap:10px; margin-top:14px; }
+  .player button{
+    font-family:inherit; font-size:0.74rem; letter-spacing:0.04em;
+    background:transparent; color:var(--paper); border:1px solid var(--line);
+    border-radius: 10px; padding: 11px 16px; cursor:pointer; flex:1;
+  }
+  .player button:hover{ border-color: var(--amber); color: var(--amber); }
+  .player button.primary{ background: var(--amber); border-color: var(--amber); color:#100b0a; font-weight:700; }
+  .player button.primary:hover{ color:#100b0a; }
+
+  .status{
+    margin-top: 12px; font-size:0.66rem; letter-spacing:0.04em; color: var(--muted);
+    min-height:1.2em;
+  }
+  .amb-status{ font-size:0.62rem; letter-spacing:0.03em; color: var(--muted); }
+  .mix-row{ display:flex; gap:16px; align-items:center; }
+  .mix-label{ font-size:0.66rem; letter-spacing:0.04em; color: var(--muted); display:flex; align-items:center; gap:8px; flex:1; }
+  input[type=range]{ flex:1; accent-color: var(--amber); height:20px; }
+  .seed-box{
+    font-family:inherit; font-size:0.72rem; color:var(--paper); background:#16140f;
+    border:1px solid var(--line); border-radius:8px; padding:6px 9px; width:120px; text-align:right;
+  }
+  .seed-box:focus{ outline:1px solid var(--amber); border-color: var(--amber); }
+  .support{
+    margin-top: 22px;
+    background: var(--panel);
+    border:1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 18px;
+  }
+  .support h2{ font-family:'Fraunces', Georgia, serif; font-style:italic; font-weight:600; font-size:1.15rem; margin:0 0 8px; color:var(--paper); }
+  .support-text{ margin:0 0 14px; color: var(--muted); font-size:0.7rem; line-height:1.6; }
+  .support-btn{
+    font-size:0.74rem; letter-spacing:0.04em;
+    color: var(--paper); text-decoration:none;
+    border:1px solid var(--line); border-radius:10px;
+    padding: 10px 16px; cursor:pointer;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .support-btn:hover{ border-color: var(--amber); color: var(--amber); }
+  .support-hint{ margin: 12px 0 0; font-size:0.6rem; letter-spacing:0.03em; color: var(--muted); }
+  .note{
+    margin-top: 22px; font-size:0.62rem; line-height:1.7; color: var(--muted);
+    letter-spacing:0.03em;
+  }
+  .wave{ width:100%; height:46px; margin-top:14px; opacity:0.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Ruhe</h1>
+    <div class="tagline">a small quiet thing, made only for you &mdash; generated, not recorded</div>
+  </header>
+
+  <div class="card">
+    <h2>Mood</h2>
+    <div class="row" id="moodRow">
+      <button class="pill active" data-k="mood" data-v="calm">Calm</button>
+      <button class="pill" data-k="mood" data-v="focus">Focus</button>
+      <button class="pill" data-k="mood" data-v="sleep">Sleep</button>
+      <button class="pill" data-k="mood" data-v="grounded">Grounded</button>
+      <button class="pill" data-k="mood" data-v="unwind">Unwind</button>
+      <button class="pill" data-k="mood" data-v="meditate">Meditate</button>
+      <button class="pill" data-k="mood" data-v="dreamy">Dreamy</button>
+      <button class="pill" data-k="mood" data-v="energize">Energize</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Environment</h2>
+    <div class="row" id="envRow">
+      <button class="pill active" data-k="env" data-v="rain">Rain</button>
+      <button class="pill" data-k="env" data-v="forest">Forest</button>
+      <button class="pill" data-k="env" data-v="ocean">Ocean</button>
+      <button class="pill" data-k="env" data-v="night">Night</button>
+      <button class="pill" data-k="env" data-v="hum">Warm hum</button>
+      <button class="pill" data-k="env" data-v="space">Space</button>
+      <button class="pill" data-k="env" data-v="fire">Fire</button>
+      <button class="pill" data-k="env" data-v="storm">Storm</button>
+      <button class="pill" data-k="env" data-v="stream">Stream</button>
+      <button class="pill" data-k="env" data-v="wind">Wind</button>
+      <button class="pill" data-k="env" data-v="cafe">Café</button>
+      <button class="pill" data-k="env" data-v="heartbeat">Heartbeat</button>
+    </div>
+    <div class="row" style="margin-top:12px; align-items:center;">
+      <button class="pill" id="ambBtn">Add real ambience…</button>
+      <button class="pill" id="ambClear">Clear</button>
+      <span class="amb-status" id="ambStatus">generated ambience (no recordings yet)</span>
+      <input type="file" id="ambInput" accept="audio/*" multiple hidden>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Tuning &nbsp;(A4 reference)</h2>
+    <div class="row" id="tuneRow">
+      <button class="pill active" data-k="tuning" data-v="auto">Auto</button>
+      <button class="pill" data-k="tuning" data-v="432">432 Hz</button>
+      <button class="pill" data-k="tuning" data-v="440">440 Hz</button>
+      <button class="pill" data-k="tuning" data-v="528">528 Hz</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Length</h2>
+    <div class="row" id="lenRow">
+      <button class="pill" data-k="len" data-v="60">1 min</button>
+      <button class="pill active" data-k="len" data-v="180">3 min</button>
+      <button class="pill" data-k="len" data-v="300">5 min</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Mix</h2>
+    <div class="mix-row">
+      <label class="mix-label">Music <input type="range" id="musicVol" min="0" max="100" value="75"></label>
+      <label class="mix-label">Ambience <input type="range" id="ambVol" min="0" max="100" value="75"></label>
+    </div>
+    <div class="mix-row" style="margin-top:12px; align-items:center;">
+      <span class="mix-label" style="flex:1;">Seed (recreate an exact soundscape)</span>
+      <input type="text" id="seedInput" class="seed-box" placeholder="random" inputmode="numeric">
+    </div>
+  </div>
+
+  <button class="make" id="makeBtn">Make my calm</button>
+  <div class="status" id="status"></div>
+
+  <div class="result" id="result">
+    <div class="now">
+      <div class="title" id="nowTitle">&nbsp;</div>
+      <div class="meta" id="nowMeta"></div>
+    </div>
+    <canvas class="wave" id="wave" height="46"></canvas>
+    <div class="player">
+      <button class="primary" id="playBtn">&#9654; Play</button>
+      <button id="dlBtn">Download WAV</button>
+    </div>
+  </div>
+
+  <div class="note">
+    The music is composed in code from a seed &mdash; never the same twice, but reproducible: type a
+    seed number to recreate an exact soundscape, or share it with someone. Tuned to your choice of
+    reference pitch, with music and ambience balanced to taste. Environments are synthesised, or you
+    can layer in your own recordings ("Add real ambience") for genuine rain, wind or waves.
+  </div>
+
+  <div class="support" id="support">
+    <div class="support-inner">
+      <h2>Support this quiet thing</h2>
+      <p class="support-text">If Ruhe brought you a moment of calm, you can buy it a coffee.</p>
+      <div class="row">
+        <a class="support-btn" id="kofiBtn" href="#" target="_blank" rel="noopener">☕ Buy me a coffee</a>
+        <a class="support-btn" id="twintBtn" href="#" target="_blank" rel="noopener">Twint</a>
+      </div>
+      <p class="support-hint" id="supportHint">Payment links coming soon.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------------- support links (fill these in later) ----------------
+  // Paste your payment links here. Leave as "" to keep a button hidden.
+  const SUPPORT = {
+    kofi:  "",   // e.g. "https://ko-fi.com/yourname"
+    twint: ""    // e.g. your Twint payment link / QR page URL
+  };
+
+  // ---------------- state ----------------
+  const opts = { mood:"calm", env:"rain", tuning:"auto", len:180, musicVol:0.75, ambVol:0.75 };
+  let buffer = null;            // rendered AudioBuffer
+  let playing = false;
+  let playSrc = null;
+  let liveCtx = null;
+  let RNG = null;               // active seeded rng (for a render)
+  let REF = 432;                // active A4 reference
+  let sampleBuffers = {};       // env -> array of decoded AudioBuffers (real ambience)
+  let lastUsedSamples = false;  // whether the last render used real samples
+
+  // ---------------- tuning ----------------
+  const TUNINGS = { "432":432, "440":440, "528":528 };
+  const mtof = m => REF * Math.pow(2, (m-69)/12);
+
+  // ---------------- seeded rng ----------------
+  function mulberry32(seed){
+    return function(){
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = (t + Math.imul(t ^ t >>> 7, 61 | t)) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  // ---------------- moods ----------------
+  const MOODS = {
+    calm:     { bpm:60, scale:[0,2,4,7,9],  root:55, bright:0.5,  density:0.5,  autoTune:"432", prog:[0,3,1,2], adj:['Still','Gentle','Soft','Clear','Warm'],    noun:['Harbor','Meadow','Morning','Window','Light','Water'] },
+    focus:    { bpm:72, scale:[0,2,4,7,9],  root:57, bright:0.7,  density:0.35, autoTune:"440", prog:[0,1,3,0], adj:['Steady','Clear','Quiet','Low','Slow'],     noun:['Current','Field','Line','Stone','Air','Room'] },
+    sleep:    { bpm:48, scale:[0,3,5,7,10], root:50, bright:0.25, density:0.25, autoTune:"432", prog:[0,1,0,2], adj:['Deep','Distant','Fading','Hidden','Slow'], noun:['Night','Tide','Ember','Drift','Shade','Breath'] },
+    grounded: { bpm:56, scale:[0,3,5,7,10], root:52, bright:0.4,  density:0.4,  autoTune:"528", prog:[0,3,2,1], adj:['Low','Warm','Earthen','Quiet','Slow'],    noun:['Soil','Oak','Stone','Hearth','River','Field'] },
+    unwind:   { bpm:64, scale:[0,2,4,7,9],  root:54, bright:0.45, density:0.45, autoTune:"432", prog:[0,2,1,3], adj:['Slow','Easy','Loose','Soft','Evening'],   noun:['Chair','Porch','Tea','Hours','Sunday','Warmth'] },
+    meditate: { bpm:40, scale:[0,3,5,7,10], root:48, bright:0.2,  density:0.2,  autoTune:"432", prog:[0,0,1,0], adj:['Still','Deep','Open','Clear','Inner'],    noun:['Breath','Center','Room','Void','Silence','Pond'] },
+    dreamy:   { bpm:58, scale:[0,2,4,7,9],  root:56, bright:0.6,  density:0.4,  autoTune:"432", prog:[0,3,2,1], adj:['Floating','Pale','Soft','Distant','Lucid'],noun:['Cloud','Haze','Moon','Veil','Horizon','Memory'] },
+    energize: { bpm:84, scale:[0,2,4,7,9],  root:60, bright:0.8,  density:0.5,  autoTune:"528", prog:[0,1,2,3], adj:['Bright','Open','Light','Fresh','Rising'], noun:['Morning','Sun','Step','Air','Day','Spark'] },
+  };
+
+  function chordNotes(scale, deg, root){
+    const n = scale.length;
+    return [deg, deg+2, deg+4].map(d => {
+      const oct = Math.floor(d/n);
+      return root + oct*12 + scale[((d%n)+n)%n];
+    });
+  }
+
+  // ---------------- audio helpers ----------------
+  // Brown/red noise: integrated white noise — the low, soft "wash" that
+  // sounds like wind, ocean and distant rain rather than static.
+  function makeBrownBuffer(ctx, secs){
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate*secs), ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    let last = 0;
+    for(let i=0;i<d.length;i++){
+      const w = RNG()*2-1;
+      last = (last + 0.02*w) / 1.02;
+      d[i] = last * 3.4;
+    }
+    return buf;
+  }
+  // Rain as thousands of droplets, not a hiss: a soft wet bed plus many
+  // short decaying noise "ticks" at random positions, then peak-normalised.
+  function makeRainBuffer(ctx, secs){
+    const sr = ctx.sampleRate, len = Math.floor(sr*secs);
+    const buf = ctx.createBuffer(1, len, sr);
+    const d = buf.getChannelData(0);
+    let lp = 0;
+    for(let i=0;i<len;i++){ lp += (RNG()*2-1 - lp)*0.012; d[i] = lp*0.05; }
+    const drops = Math.floor(secs * 42);
+    for(let k=0;k<drops;k++){
+      const start = Math.floor(RNG()*len);
+      const dd = Math.floor(sr*(0.004 + RNG()*0.022));
+      const amp = 0.06 + RNG()*0.20;
+      for(let j=0;j<dd && start+j<len;j++){
+        d[start+j] += (RNG()*2-1) * amp * (1 - j/dd);
+      }
+    }
+    let mx = 0; for(let i=0;i<len;i++) mx = Math.max(mx, Math.abs(d[i]));
+    const sc = mx > 0 ? 0.9/mx : 1;
+    for(let i=0;i<len;i++) d[i] *= sc;
+    return buf;
+  }
+  // Fire: a low warm rumble bed plus sparse, sharp, irregular "crackle"
+  // ticks (louder and more spread out than rain, some in little bursts).
+  function makeFireBuffer(ctx, secs){
+    const sr = ctx.sampleRate, len = Math.floor(sr*secs);
+    const buf = ctx.createBuffer(1, len, sr);
+    const d = buf.getChannelData(0);
+    let lp = 0;
+    for(let i=0;i<len;i++){ lp += (RNG()*2-1 - lp)*0.02; d[i] = lp*0.06; }
+    const crackles = Math.floor(secs * 7);
+    for(let k=0;k<crackles;k++){
+      const start = Math.floor(RNG()*len);
+      const burst = 1 + Math.floor(RNG()*3);   // sometimes a little burst
+      for(let b=0;b<burst;b++){
+        const p = start + Math.floor(RNG()*sr*0.03);
+        if(p >= len) break;
+        const dd = Math.floor(sr*(0.002 + RNG()*0.008));
+        const amp = 0.15 + RNG()*0.45;
+        for(let j=0;j<dd && p+j<len;j++){
+          d[p+j] += (RNG()*2-1) * amp * (1 - j/dd);
+        }
+      }
+    }
+    let mx = 0; for(let i=0;i<len;i++) mx = Math.max(mx, Math.abs(d[i]));
+    const sc = mx > 0 ? 0.9/mx : 1;
+    for(let i=0;i<len;i++) d[i] *= sc;
+    return buf;
+  }
+  // Stream: a bright, faster-moving water band (mid-high brown noise) with
+  // small random "babbles" — high-frequency blips that read as running water.
+  function makeStreamBuffer(ctx, secs){
+    const sr = ctx.sampleRate, len = Math.floor(sr*secs);
+    const buf = ctx.createBuffer(1, len, sr);
+    const d = buf.getChannelData(0);
+    let lp = 0;
+    for(let i=0;i<len;i++){ lp += (RNG()*2-1 - lp)*0.10; d[i] = lp*0.10; }
+    const babbles = Math.floor(secs * 14);
+    for(let k=0;k<babbles;k++){
+      const start = Math.floor(RNG()*len);
+      const dd = Math.floor(sr*(0.015 + RNG()*0.05));
+      const amp = 0.05 + RNG()*0.12;
+      for(let j=0;j<dd && start+j<len;j++){
+        d[start+j] += (RNG()*2-1) * amp * Math.sin(Math.PI*j/dd);
+      }
+    }
+    let mx = 0; for(let i=0;i<len;i++) mx = Math.max(mx, Math.abs(d[i]));
+    const sc = mx > 0 ? 0.85/mx : 1;
+    for(let i=0;i<len;i++) d[i] *= sc;
+    return buf;
+  }
+  function makeImpulse(ctx, secs){
+    const sr = ctx.sampleRate, len = Math.floor(sr*secs);
+    const buf = ctx.createBuffer(2, len, sr);
+    for(let ch=0; ch<2; ch++){
+      const d = buf.getChannelData(ch);
+      let lp = 0;
+      for(let i=0;i<len;i++){
+        lp += ((RNG()*2-1) - lp)*0.35;
+        d[i] = lp * Math.pow(1 - i/len, 3.2);
+      }
+    }
+    return buf;
+  }
+
+  function pad(ctx, dest, t, dur, notes, vel, bright){
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vel, t + Math.min(2.5, dur*0.3));
+    g.gain.setValueAtTime(vel, t + dur*0.75);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 700 + bright*1200; lp.Q.value = 0.4;
+    lp.connect(g); g.connect(dest);
+    notes.forEach(m => {
+      const f = mtof(m + 12);
+      // warm stack: sine fundamental + two gently detuned triangles + a
+      // soft sine an octave up. No saws — that was the "chip" sound.
+      const voices = [
+        { type:'sine',     mult:1, detune:0,  gain:0.50 },
+        { type:'triangle', mult:1, detune:-6, gain:0.22 },
+        { type:'triangle', mult:1, detune:6,  gain:0.22 },
+        { type:'sine',     mult:2, detune:0,  gain:0.26 },
+      ];
+      voices.forEach(v => {
+        const o = ctx.createOscillator(); o.type = v.type;
+        o.frequency.value = f*v.mult;
+        o.detune.value = v.detune;
+        const og = ctx.createGain(); og.gain.value = v.gain;
+        o.connect(og); og.connect(lp);
+        o.start(t); o.stop(t + dur + 0.6);
+      });
+    });
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.05 + RNG()*0.06;
+    const lg = ctx.createGain(); lg.gain.value = 150;
+    lfo.connect(lg); lg.connect(lp.frequency); lfo.start(t); lfo.stop(t + dur);
+  }
+
+  function bell(ctx, dest, t, m, dur, vel){
+    const f = mtof(m);
+    // Softer FM: much lower modulation index (f*0.6 vs the old f*2) gives a
+    // round, wooden "tine" instead of a metallic chip blip.
+    const car = ctx.createOscillator(); car.type = 'sine'; car.frequency.value = f;
+    const mod = ctx.createOscillator(); mod.type = 'sine'; mod.frequency.value = f*2.5;
+    const mg = ctx.createGain();
+    mg.gain.setValueAtTime(f*0.6, t);
+    mg.gain.exponentialRampToValueAtTime(0.08, t + dur);
+    mod.connect(mg); mg.connect(car.frequency);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.exponentialRampToValueAtTime(vel, t + 0.03);
+    env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    car.connect(env); env.connect(dest);
+    car.start(t); car.stop(t + dur + 0.1); mod.start(t); mod.stop(t + dur + 0.1);
+  }
+
+  function sub(ctx, dest, t, m, dur, vel){
+    const o = ctx.createOscillator(); o.frequency.value = mtof(m - 12);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vel, t + 1.2);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(dest); o.start(t); o.stop(t + dur);
+  }
+
+  function cricket(ctx, dest, t, f, vel){
+    const o = ctx.createOscillator(); o.frequency.value = f;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vel, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+    o.connect(g); g.connect(dest); o.start(t); o.stop(t + 0.05);
+  }
+
+  // Real-sample ambience layer: loops a user-supplied recording under the
+  // music. Returns true if a sample was used (so the render knows to skip
+  // the synthetic texture). This is the "genuine environment" path.
+  function sampleLayer(ctx, dest, env, t, dur){
+    const bufs = sampleBuffers[env];
+    if(!bufs || !bufs.length) return false;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.5, t + 2);
+    g.gain.setValueAtTime(0.5, Math.max(t + 2, t + dur - 4));
+    g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    g.connect(dest);
+    bufs.forEach(b => {
+      const s = ctx.createBufferSource(); s.buffer = b; s.loop = true;
+      s.connect(g); s.start(t); s.stop(t + dur);
+    });
+    return true;
+  }
+
+  // A low, soft thump — used for the heartbeat environment.
+  function thump(ctx, dest, t, vel){
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(85, t);
+    o.frequency.exponentialRampToValueAtTime(40, t + 0.18);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vel, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+    o.connect(g); g.connect(dest); o.start(t); o.stop(t + 0.28);
+  }
+
+  // Synthetic environment texture (fallback when no real sample is loaded).
+  function texture(ctx, dest, env, t, dur){
+    // pick the source buffer for this environment
+    let buf;
+    if(env === 'rain') buf = makeRainBuffer(ctx, 6);
+    else if(env === 'fire') buf = makeFireBuffer(ctx, 8);
+    else if(env === 'stream') buf = makeStreamBuffer(ctx, 8);
+    else buf = makeBrownBuffer(ctx, 8);   // forest, ocean, night, hum, space, wind, cafe, storm
+
+    const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+    let head = src;
+    if(env === 'rain'){ const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value = 8000; head.connect(lp); head = lp; }
+    else if(env === 'fire'){ const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value = 6500; head.connect(lp); head = lp; }
+    else if(env === 'stream'){ const bp = ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value = 1800; bp.Q.value = 0.5; head.connect(bp); head = bp; }
+    else if(env === 'forest'){ const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value = 2200; head.connect(lp); head = lp; }
+    else if(env === 'ocean'){ const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value = 550; head.connect(lp); head = lp; }
+    else if(env === 'storm'){ const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value = 700; head.connect(lp); head = lp; }
+    else if(env === 'wind'){ const bp = ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value = 450; bp.Q.value = 0.7; head.connect(bp); head = bp; }
+    else if(env === 'cafe'){ const bp = ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value = 380; bp.Q.value = 0.8; head.connect(bp); head = bp; }
+    else { const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value = 480; head.connect(lp); head = lp; } // night, hum, space
+
+    const g = ctx.createGain();
+    const base = { rain:0.55, forest:0.30, ocean:0.42, night:0.22, hum:0.16, space:0.22, fire:0.50, storm:0.38, stream:0.40, wind:0.40, cafe:0.16, heartbeat:0 }[env];
+    g.gain.value = base;
+    head.connect(g); g.connect(dest);
+
+    // slow movement per environment
+    if(env === 'ocean'){ // swell (waves)
+      const lfo = ctx.createOscillator(); lfo.frequency.value = 0.06;
+      const lg = ctx.createGain(); lg.gain.value = base*0.55;
+      lfo.connect(lg); lg.connect(g.gain); lfo.start(t); lfo.stop(t + dur);
+    } else if(env === 'forest'){ // gentle breathing
+      const lfo = ctx.createOscillator(); lfo.frequency.value = 0.05;
+      const lg = ctx.createGain(); lg.gain.value = base*0.4;
+      lfo.connect(lg); lg.connect(g.gain); lfo.start(t); lfo.stop(t + dur);
+    } else if(env === 'wind'){ // gusts: stronger, slower
+      const lfo = ctx.createOscillator(); lfo.frequency.value = 0.045;
+      const lg = ctx.createGain(); lg.gain.value = base*0.6;
+      lfo.connect(lg); lg.connect(g.gain); lfo.start(t); lfo.stop(t + dur);
+    } else if(env === 'stream'){ // gentle ripple
+      const lfo = ctx.createOscillator(); lfo.frequency.value = 0.11;
+      const lg = ctx.createGain(); lg.gain.value = base*0.3;
+      lfo.connect(lg); lg.connect(g.gain); lfo.start(t); lfo.stop(t + dur);
+    } else if(env === 'cafe'){ // murmur swell
+      const lfo = ctx.createOscillator(); lfo.frequency.value = 0.08;
+      const lg = ctx.createGain(); lg.gain.value = base*0.5;
+      lfo.connect(lg); lg.connect(g.gain); lfo.start(t); lfo.stop(t + dur);
+    }
+    if(env !== 'heartbeat'){ src.start(t); src.stop(t + dur); }
+
+    // env-specific one-shot details
+    if(env === 'night'){ // crickets
+      let tt = t + 2;
+      while(tt < t + dur - 1){
+        const n = 1 + Math.floor(RNG()*3);
+        for(let i=0;i<n;i++) cricket(ctx, dest, tt + i*0.055, 3800 + RNG()*2400, 0.018);
+        tt += 0.4 + RNG()*1.6;
+      }
+    } else if(env === 'forest'){ // soft chirps
+      let tt = t + 3;
+      while(tt < t + dur - 1){
+        bell(ctx, dest, tt, 76 + Math.floor(RNG()*8), 0.5, 0.03);
+        tt += 1.5 + RNG()*3;
+      }
+    } else if(env === 'space'){ // rare high bell
+      let tt = t + 4;
+      while(tt < t + dur - 2){
+        bell(ctx, dest, tt, 84 + Math.floor(RNG()*10), 4, 0.04);
+        tt += 5 + RNG()*8;
+      }
+    } else if(env === 'hum'){ // low warm drone cluster
+      [0, 0.3, 0.7].forEach(det => {
+        const o = ctx.createOscillator(); o.frequency.value = mtof(45);
+        o.detune.value = det*8;
+        const og = ctx.createGain(); og.gain.value = 0.05;
+        o.connect(og); og.connect(dest); o.start(t); o.stop(t + dur);
+      });
+    } else if(env === 'storm'){ // low distant thunder rumbles
+      let tt = t + 3;
+      while(tt < t + dur - 4){
+        const d = 1.5 + RNG()*2.5;
+        const o = ctx.createOscillator(); o.type = 'sine';
+        o.frequency.setValueAtTime(52, tt); o.frequency.exponentialRampToValueAtTime(34, tt + d);
+        const gg = ctx.createGain();
+        gg.gain.setValueAtTime(0.0001, tt);
+        gg.gain.exponentialRampToValueAtTime(0.12, tt + d*0.35);
+        gg.gain.exponentialRampToValueAtTime(0.0001, tt + d);
+        o.connect(gg); gg.connect(dest); o.start(tt); o.stop(tt + d);
+        tt += 6 + RNG()*10;
+      }
+    } else if(env === 'cafe'){ // occasional soft cup clink
+      let tt = t + 2;
+      while(tt < t + dur - 1){
+        bell(ctx, dest, tt, 88 + Math.floor(RNG()*5), 0.3, 0.02);
+        tt += 3 + RNG()*6;
+      }
+    } else if(env === 'heartbeat'){ // slow, steady lub-dub
+      let tt = t + 1;
+      while(tt < t + dur - 1){
+        thump(ctx, dest, tt, 0.20);
+        thump(ctx, dest, tt + 0.30, 0.13);
+        tt += 1.0;
+      }
+    }
+  }
+
+  // ---------------- render ----------------
+  function resolveTuning(o){
+    if(o.tuning !== "auto") return o.tuning;
+    return (MOODS[o.mood] || MOODS.calm).autoTune;
+  }
+
+  function renderSoundscape(seed, o){
+    RNG = mulberry32(seed);
+    REF = TUNINGS[resolveTuning(o)];
+    const mood = MOODS[o.mood];
+    const dur = o.len;
+    const SRATE = 48000;
+    const ctx = new OfflineAudioContext(2, Math.ceil(dur*SRATE), SRATE);
+
+    // buses: music and ambience route through their own gain so the Mix
+    // sliders can balance them independently.
+    const master = ctx.createGain(); master.gain.value = 0.85;
+    const musicBus = ctx.createGain(); musicBus.gain.value = o.musicVol;
+    const ambBus = ctx.createGain(); ambBus.gain.value = o.ambVol;
+    musicBus.connect(master); ambBus.connect(master);
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.ratio.value = 3; comp.attack.value = 0.02; comp.release.value = 0.3;
+    master.connect(comp); comp.connect(ctx.destination);
+
+    // master fade in/out
+    master.gain.setValueAtTime(0.0001, 0);
+    master.gain.linearRampToValueAtTime(0.85, Math.min(3, dur*0.2));
+    master.gain.setValueAtTime(0.85, Math.max(0, dur - 4));
+    master.gain.linearRampToValueAtTime(0.0001, dur);
+
+    // breath: slow overall swell
+    const breath = ctx.createOscillator(); breath.frequency.value = 1/(20 + RNG()*15);
+    const bg = ctx.createGain(); bg.gain.value = 0.06;
+    breath.connect(bg); bg.connect(master.gain); breath.start(0); breath.stop(dur);
+
+    // reverb (music only)
+    const verb = ctx.createConvolver(); verb.buffer = makeImpulse(ctx, 2.6);
+    const verbSend = ctx.createGain(); verbSend.gain.value = 0.5;
+    const verbIn = ctx.createGain(); verbIn.gain.value = 1;
+    verbSend.connect(verb); verb.connect(verbIn); verbIn.connect(musicBus);
+
+    const root = mood.root + Math.floor(RNG()*5);
+    const chordSec = (60/mood.bpm)*4;
+    // real sample ambience if available, otherwise synthesised texture
+    lastUsedSamples = sampleLayer(ctx, ambBus, o.env, 0, dur);
+    if(!lastUsedSamples){
+      texture(ctx, ambBus, o.env, 0, dur);
+    }
+
+    // chords + sub + melody (all into musicBus)
+    let bar = 0, idx = 0;
+    for(let t = 0; t < dur; t += chordSec){
+      const cd = chordSec + 1.5;                       // overlapping pad tails
+      const deg = mood.prog[idx % mood.prog.length];
+      const notes = chordNotes(mood.scale, deg, root);
+      pad(ctx, verbSend, t, cd, notes, 0.05, mood.bright);
+      sub(ctx, musicBus, t, notes[0], cd, 0.05);
+
+      // sparse melody bells
+      if(RNG() < mood.density){
+        const nM = 1 + Math.floor(RNG()*2);
+        for(let k=0;k<nM;k++){
+          const m = root + 12 + mood.scale[Math.floor(RNG()*mood.scale.length)];
+          bell(ctx, verbSend, t + RNG()*chordSec*0.7, m, 2.5 + RNG()*3, 0.05 + RNG()*0.05);
+        }
+      }
+      // focus: faint steady pulse (a soft low tick every bar)
+      if(o.mood === 'focus'){
+        cricket(ctx, musicBus, t + chordSec*0.5, 90, 0.05);
+      }
+      idx++; bar++;
+    }
+
+    return ctx.startRendering();
+  }
+
+  // ---------------- wav encode ----------------
+  function writeStr(view, off, str){ for(let i=0;i<str.length;i++) view.setUint8(off+i, str.charCodeAt(i)); }
+  function encodeWav(buf){
+    const nc = buf.numberOfChannels, sr = buf.sampleRate, len = buf.length;
+    const blockAlign = nc*2, dataSize = len*blockAlign;
+    const ab = new ArrayBuffer(44 + dataSize);
+    const v = new DataView(ab);
+    writeStr(v,0,'RIFF'); v.setUint32(4,36+dataSize,true); writeStr(v,8,'WAVE');
+    writeStr(v,12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true);
+    v.setUint16(22,nc,true); v.setUint32(24,sr,true); v.setUint32(28,sr*blockAlign,true);
+    v.setUint16(32,blockAlign,true); v.setUint16(34,16,true);
+    writeStr(v,36,'data'); v.setUint32(40,dataSize,true);
+    const ch = []; for(let c=0;c<nc;c++) ch.push(buf.getChannelData(c));
+    let off = 44;
+    for(let i=0;i<len;i++){
+      for(let c=0;c<nc;c++){
+        let s = Math.max(-1, Math.min(1, ch[c][i]));
+        v.setInt16(off, s<0 ? s*0x8000 : s*0x7FFF, true);
+        off += 2;
+      }
+    }
+    return new Blob([ab], {type:'audio/wav'});
+  }
+
+  // ---------------- ui ----------------
+  document.querySelectorAll('.pill').forEach(p => {
+    p.addEventListener('click', ()=>{
+      const k = p.dataset.k;
+      document.querySelectorAll('.pill[data-k="'+k+'"]').forEach(x=>x.classList.remove('active'));
+      p.classList.add('active');
+      opts[k] = p.dataset.v;
+      if(k === 'len') opts.len = parseInt(p.dataset.v, 10);
+    });
+  });
+
+  const makeBtn = document.getElementById('makeBtn');
+  const statusEl = document.getElementById('status');
+  const resultEl = document.getElementById('result');
+  const playBtn = document.getElementById('playBtn');
+  const dlBtn = document.getElementById('dlBtn');
+
+  function setStatus(t){ statusEl.textContent = t; }
+
+  // ---- real ambience sample loading ----
+  const ambBtn = document.getElementById('ambBtn');
+  const ambClear = document.getElementById('ambClear');
+  const ambInput = document.getElementById('ambInput');
+  const ambStatus = document.getElementById('ambStatus');
+
+  function updateAmbStatus(){
+    const envs = Object.keys(sampleBuffers).filter(k => sampleBuffers[k] && sampleBuffers[k].length);
+    if(!envs.length){
+      ambStatus.textContent = 'generated ambience (no recordings yet)';
+      return;
+    }
+    ambStatus.textContent = 'recordings loaded: ' + envs.map(e => e + ' ×' + sampleBuffers[e].length).join(', ');
+  }
+
+  ambBtn.addEventListener('click', ()=> ambInput.click());
+
+  ambInput.addEventListener('change', async ()=>{
+    const files = Array.from(ambInput.files || []);
+    if(!files.length) return;
+    const ctx = ensureLiveCtx();
+    let loaded = 0;
+    for(const f of files){
+      try{
+        const ab = await f.arrayBuffer();
+        const buf = await ctx.decodeAudioData(ab);
+        (sampleBuffers[opts.env] = sampleBuffers[opts.env] || []).push(buf);
+        loaded++;
+      }catch(e){ /* skip unreadable file */ }
+    }
+    ambInput.value = '';
+    updateAmbStatus();
+    if(loaded) setStatus('loaded ' + loaded + ' recording' + (loaded > 1 ? 's' : '') + ' for ' + opts.env + '.');
+  });
+
+  ambClear.addEventListener('click', ()=>{
+    sampleBuffers = {};
+    updateAmbStatus();
+    setStatus('cleared all recordings.');
+  });
+
+  // mix sliders
+  const musicVolEl = document.getElementById('musicVol');
+  const ambVolEl = document.getElementById('ambVol');
+  musicVolEl.addEventListener('input', ()=> opts.musicVol = parseInt(musicVolEl.value, 10)/100);
+  ambVolEl.addEventListener('input', ()=> opts.ambVol = parseInt(ambVolEl.value, 10)/100);
+
+  // seed input
+  const seedInput = document.getElementById('seedInput');
+
+  function stopPlayback(){
+    if(playSrc){ try{ playSrc.stop(); }catch(e){} playSrc = null; }
+    playing = false;
+    playBtn.innerHTML = '&#9654; Play';
+  }
+
+  async function make(){
+    makeBtn.disabled = true;
+    resultEl.classList.remove('show');
+    stopPlayback();
+    // seed: use the typed value if valid, else a fresh random one
+    const typed = parseInt(seedInput.value, 10);
+    const seed = (typed > 0 ? typed : 1 + Math.floor(Math.random()*999999999));
+    const mood = MOODS[opts.mood];
+    // build a title from its own rng, independent of the render's rng
+    const r = mulberry32(seed);
+    const pickLocal = a => a[Math.floor(r()*a.length)];
+    const tName = pickLocal(mood.adj) + ' ' + pickLocal(mood.noun);
+    setStatus('composing…');
+
+    // yield so the status paints
+    await new Promise(res => setTimeout(res, 20));
+
+    const t0 = performance.now();
+    buffer = await renderSoundscape(seed, opts);
+    const ms = Math.round(performance.now() - t0);
+
+    const tuned = resolveTuning(opts);
+    document.getElementById('nowTitle').textContent = tName;
+    document.getElementById('nowMeta').innerHTML =
+      'seed #'+seed+'<br>'+
+      tuned+' Hz'+(opts.tuning === 'auto' ? ' (auto)' : '')+' &middot; '+opts.mood+' &middot; '+opts.env+'<br>'+
+      (lastUsedSamples ? 'real ambience' : 'generated ambience')+' &middot; '+
+      Math.round(opts.len/60*10)/10+' min &middot; rendered in '+ms+'ms';
+
+    resultEl.classList.add('show');
+    drawWave();
+    setStatus('done — press play, or download the WAV.');
+    makeBtn.disabled = false;
+  }
+
+  function drawWave(){
+    const cv = document.getElementById('wave');
+    const c2 = cv.getContext('2d');
+    const W = cv.width = cv.clientWidth || 520, H = cv.height;
+    c2.clearRect(0,0,W,H);
+    if(!buffer) return;
+    const d = buffer.getChannelData(0);
+    const step = Math.max(1, Math.floor(d.length / W));
+    c2.strokeStyle = 'rgba(245,178,77,0.85)';
+    c2.lineWidth = 1;
+    c2.beginPath();
+    let mx = 0;
+    for(let x=0; x<W; x++){
+      let sum = 0, n = 0;
+      for(let i=x*step; i<(x+1)*step && i<d.length; i++){ sum += Math.abs(d[i]); n++; }
+      const v = n ? sum/n : 0;
+      mx = Math.max(mx, v);
+      const y = H/2 - (v)* (H/2 - 4);
+      x===0 ? c2.moveTo(x,y) : c2.lineTo(x,y);
+    }
+    c2.stroke();
+  }
+
+  function ensureLiveCtx(){
+    if(!liveCtx) liveCtx = new (window.AudioContext||window.webkitAudioContext)();
+    return liveCtx;
+  }
+
+  playBtn.addEventListener('click', ()=>{
+    if(!buffer) return;
+    if(playing){ stopPlayback(); return; }
+    const ctx = ensureLiveCtx();
+    if(ctx.state === 'suspended') ctx.resume();
+    playSrc = ctx.createBufferSource();
+    playSrc.buffer = buffer;
+    playSrc.connect(ctx.destination);
+    playSrc.onended = ()=>{ playing = false; playBtn.innerHTML = '&#9654; Play'; };
+    playSrc.start(0);
+    playing = true;
+    playBtn.innerHTML = '&#9632; Stop';
+  });
+
+  dlBtn.addEventListener('click', ()=>{
+    if(!buffer) return;
+    const blob = encodeWav(buffer);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ruhe-' + Date.now() + '-' + resolveTuning(opts) + 'hz.wav';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    setStatus('saved — it is yours now.');
+  });
+
+  makeBtn.addEventListener('click', make);
+
+  // ---- support buttons: show only the ones with a link filled in ----
+  const kofiBtn = document.getElementById('kofiBtn');
+  const twintBtn = document.getElementById('twintBtn');
+  const supportHint = document.getElementById('supportHint');
+  let anySupport = false;
+  if(SUPPORT.kofi){ kofiBtn.href = SUPPORT.kofi; kofiBtn.style.display = ''; anySupport = true; }
+  else kofiBtn.style.display = 'none';
+  if(SUPPORT.twint){ twintBtn.href = SUPPORT.twint; twintBtn.style.display = ''; anySupport = true; }
+  else twintBtn.style.display = 'none';
+  if(anySupport) supportHint.textContent = 'Thank you for keeping Ruhe quiet.';
+  else supportHint.textContent = 'Payment links coming soon.';
+
+  setStatus('ready — choose a mood and make something quiet.');
+})();
+</script>
+</body>
+</html>

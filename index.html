@@ -167,6 +167,8 @@
       <button class="pill" data-k="env" data-v="stream">Stream</button>
       <button class="pill" data-k="env" data-v="wind">Wind</button>
       <button class="pill" data-k="env" data-v="cafe">Café</button>
+      <button class="pill" data-k="env" data-v="birds">Birds</button>
+      <button class="pill" data-k="env" data-v="noise">Brown noise</button>
       <button class="pill" data-k="env" data-v="heartbeat">Heartbeat</button>
     </div>
     <div class="row" style="margin-top:12px; align-items:center;">
@@ -282,20 +284,23 @@
   }
   // ---------------- moods ----------------
   const MOODS = {
-    calm:     { bpm:60, scale:[0,2,4,7,9],  root:55, bright:0.5,  density:0.5,  autoTune:"432", prog:[0,3,1,2], adj:['Still','Gentle','Soft','Clear','Warm'],    noun:['Harbor','Meadow','Morning','Window','Light','Water'] },
-    focus:    { bpm:72, scale:[0,2,4,7,9],  root:57, bright:0.7,  density:0.35, autoTune:"440", prog:[0,1,3,0], adj:['Steady','Clear','Quiet','Low','Slow'],     noun:['Current','Field','Line','Stone','Air','Room'] },
-    sleep:    { bpm:48, scale:[0,3,5,7,10], root:50, bright:0.25, density:0.25, autoTune:"432", prog:[0,1,0,2], adj:['Deep','Distant','Fading','Hidden','Slow'], noun:['Night','Tide','Ember','Drift','Shade','Breath'] },
-    grounded: { bpm:56, scale:[0,3,5,7,10], root:52, bright:0.4,  density:0.4,  autoTune:"528", prog:[0,3,2,1], adj:['Low','Warm','Earthen','Quiet','Slow'],    noun:['Soil','Oak','Stone','Hearth','River','Field'] },
-    unwind:   { bpm:64, scale:[0,2,4,7,9],  root:54, bright:0.45, density:0.45, autoTune:"432", prog:[0,2,1,3], adj:['Slow','Easy','Loose','Soft','Evening'],   noun:['Chair','Porch','Tea','Hours','Sunday','Warmth'] },
-    meditate: { bpm:40, scale:[0,3,5,7,10], root:48, bright:0.2,  density:0.2,  autoTune:"432", prog:[0,0,1,0], adj:['Still','Deep','Open','Clear','Inner'],    noun:['Breath','Center','Room','Void','Silence','Pond'] },
-    dreamy:   { bpm:58, scale:[0,2,4,7,9],  root:56, bright:0.6,  density:0.4,  autoTune:"432", prog:[0,3,2,1], adj:['Floating','Pale','Soft','Distant','Lucid'],noun:['Cloud','Haze','Moon','Veil','Horizon','Memory'] },
-    energize: { bpm:84, scale:[0,2,4,7,9],  root:60, bright:0.8,  density:0.5,  autoTune:"528", prog:[0,1,2,3], adj:['Bright','Open','Light','Fresh','Rising'], noun:['Morning','Sun','Step','Air','Day','Spark'] },
+    calm:     { bpm:60, scale:[0,2,4,5,7,9,11], root:55, bright:0.45, melody:4, autoTune:"432", arp:false, pulse:null,  prog:[0,3,4,3], adj:['Still','Gentle','Soft','Clear','Warm'],    noun:['Harbor','Meadow','Morning','Window','Light','Water'] },
+    focus:    { bpm:72, scale:[0,2,4,5,7,9,11], root:57, bright:0.6,  melody:3, autoTune:"440", arp:false, pulse:'bar', prog:[0,5,3,4], adj:['Steady','Clear','Quiet','Low','Slow'],     noun:['Current','Field','Line','Stone','Air','Room'] },
+    sleep:    { bpm:48, scale:[0,2,3,5,7,8,10], root:50, bright:0.22, melody:2, autoTune:"432", arp:false, pulse:null,  prog:[0,3,0,4], adj:['Deep','Distant','Fading','Hidden','Slow'], noun:['Night','Tide','Ember','Drift','Shade','Breath'] },
+    grounded: { bpm:56, scale:[0,2,3,5,7,8,10], root:52, bright:0.35, melody:3, autoTune:"528", arp:false, pulse:'bar', prog:[0,4,5,3], adj:['Low','Warm','Earthen','Quiet','Slow'],    noun:['Soil','Oak','Stone','Hearth','River','Field'] },
+    unwind:   { bpm:64, scale:[0,2,4,5,7,9,11], root:54, bright:0.4,  melody:4, autoTune:"432", arp:false, pulse:null,  prog:[0,3,2,4], adj:['Slow','Easy','Loose','Soft','Evening'],   noun:['Chair','Porch','Tea','Hours','Sunday','Warmth'] },
+    meditate: { bpm:40, scale:[0,2,3,5,7,8,10], root:48, bright:0.18, melody:2, autoTune:"432", arp:false, pulse:null,  prog:[0,0,3,0], adj:['Still','Deep','Open','Clear','Inner'],    noun:['Breath','Center','Room','Void','Silence','Pond'] },
+    dreamy:   { bpm:58, scale:[0,2,3,5,7,9,10], root:56, bright:0.5,  melody:4, autoTune:"432", arp:true,  pulse:null,  prog:[0,3,4,2], adj:['Floating','Pale','Soft','Distant','Lucid'],noun:['Cloud','Haze','Moon','Veil','Horizon','Memory'] },
+    energize: { bpm:84, scale:[0,2,4,5,7,9,11], root:60, bright:0.65, melody:5, autoTune:"528", arp:true,  pulse:'beat',prog:[0,4,5,3], adj:['Bright','Open','Light','Fresh','Rising'], noun:['Morning','Sun','Step','Air','Day','Spark'] },
   };
 
   function chordNotes(scale, deg, root){
+    // Build a 4-note seventh chord (1-3-5-7) as a spread, open voicing:
+    // root low, then 5th, 7th and 3rd spread across the octave above.
     const n = scale.length;
-    return [deg, deg+2, deg+4].map(d => {
-      const oct = Math.floor(d/n);
+    const idx = [deg, deg+4, deg+6, deg+2];   // scale degrees 1, 5, 7, 3
+    return idx.map((d, i) => {
+      const oct = Math.floor(d/n) + (i === 0 ? 0 : 1);
       return root + oct*12 + scale[((d%n)+n)%n];
     });
   }
@@ -430,6 +435,11 @@
     const lfo = ctx.createOscillator(); lfo.frequency.value = 0.05 + RNG()*0.06;
     const lg = ctx.createGain(); lg.gain.value = 150;
     lfo.connect(lg); lg.connect(lp.frequency); lfo.start(t); lfo.stop(t + dur);
+    // breathing: a slow amplitude swell so the pad rises and falls instead
+    // of sitting as a flat, continuous drone.
+    const ampLfo = ctx.createOscillator(); ampLfo.frequency.value = 0.09 + RNG()*0.05;
+    const ampG = ctx.createGain(); ampG.gain.value = vel*0.35;
+    ampLfo.connect(ampG); ampG.connect(g.gain); ampLfo.start(t); ampLfo.stop(t + dur);
   }
 
   function bell(ctx, dest, t, m, dur, vel){
@@ -466,6 +476,59 @@
     g.gain.exponentialRampToValueAtTime(vel, t + 0.004);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
     o.connect(g); g.connect(dest); o.start(t); o.stop(t + 0.05);
+  }
+
+  // A short, bright pluck — like a soft kalimba/marimba. This is what gives
+  // "energize" and "dreamy" their movement and keeps them from sounding like
+  // the pad-only moods.
+  function pluck(ctx, dest, t, m, dur, vel){
+    const f = mtof(m);
+    const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+    const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = f*2;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vel, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g);
+    const g2 = ctx.createGain(); g2.gain.value = 0.35;
+    o2.connect(g2); g2.connect(g);
+    g.connect(dest);
+    o.start(t); o.stop(t + dur + 0.1);
+    o2.start(t); o2.stop(t + dur + 0.1);
+  }
+
+  // A soft low pulse — a round, short thump that gives a steady rhythmic
+  // feel without being a hard kick. Used for the "beat" in energetic moods.
+  function pulseTick(ctx, dest, t, vel){
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(130, t);
+    o.frequency.exponentialRampToValueAtTime(65, t + 0.1);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vel, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+    o.connect(g); g.connect(dest); o.start(t); o.stop(t + 0.22);
+  }
+
+  // The melodic lead: a soft, singing voice (triangle + a breath of sine,
+  // with gentle vibrato). This is the "tune" that carries the melody, and
+  // it's the element that was missing — before, everything was pad + plinks.
+  function lead(ctx, dest, t, m, dur, vel){
+    const f = mtof(m);
+    const car = ctx.createOscillator(); car.type = 'triangle'; car.frequency.value = f;
+    const snd = ctx.createOscillator(); snd.type = 'sine'; snd.frequency.value = f;
+    const vib = ctx.createOscillator(); vib.frequency.value = 5;
+    const vg = ctx.createGain(); vg.gain.value = 6;   // vibrato depth (cents)
+    vib.connect(vg); vg.connect(car.detune); vg.connect(snd.detune);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vel, t + Math.min(0.35, dur*0.3));
+    g.gain.setValueAtTime(vel*0.8, t + dur*0.7);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    car.connect(g); snd.connect(g); g.connect(dest);
+    car.start(t); car.stop(t + dur + 0.2);
+    snd.start(t); snd.stop(t + dur + 0.2);
+    vib.start(t); vib.stop(t + dur + 0.2);
   }
 
   // Real-sample ambience layer: loops a user-supplied recording under the
@@ -521,7 +584,7 @@
     else { const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value = 480; head.connect(lp); head = lp; } // night, hum, space
 
     const g = ctx.createGain();
-    const base = { rain:0.55, forest:0.30, ocean:0.42, night:0.22, hum:0.16, space:0.22, fire:0.50, storm:0.38, stream:0.40, wind:0.40, cafe:0.16, heartbeat:0 }[env];
+    const base = { rain:0.55, forest:0.30, ocean:0.42, night:0.22, hum:0.16, space:0.22, fire:0.50, storm:0.38, stream:0.40, wind:0.40, cafe:0.16, heartbeat:0, birds:0.22, noise:0.35 }[env];
     g.gain.value = base;
     head.connect(g); g.connect(dest);
 
@@ -663,17 +726,47 @@
       pad(ctx, verbSend, t, cd, notes, 0.05, mood.bright);
       sub(ctx, musicBus, t, notes[0], cd, 0.05);
 
-      // sparse melody bells
-      if(RNG() < mood.density){
-        const nM = 1 + Math.floor(RNG()*2);
-        for(let k=0;k<nM;k++){
-          const m = root + 12 + mood.scale[Math.floor(RNG()*mood.scale.length)];
-          bell(ctx, verbSend, t + RNG()*chordSec*0.7, m, 2.5 + RNG()*3, 0.05 + RNG()*0.05);
+      // arpeggio: broken-chord plucks that give arp moods real movement
+      if(mood.arp){
+        const spb = 60/mood.bpm;
+        const seq = [...notes, notes[0]+12, notes[1]+12, notes[2]+12];
+        let pt = t, si = 0;
+        while(pt < t + chordSec){
+          pluck(ctx, musicBus, pt, seq[si % seq.length], 0.28, 0.05);
+          pt += spb*0.5; si++;
         }
       }
-      // focus: faint steady pulse (a soft low tick every bar)
-      if(o.mood === 'focus'){
-        cricket(ctx, musicBus, t + chordSec*0.5, 90, 0.05);
+      // rhythmic pulse: every beat (energetic) or once per bar (steady)
+      if(mood.pulse === 'beat'){
+        const spb = 60/mood.bpm;
+        let pt = t;
+        while(pt < t + chordSec){
+          pulseTick(ctx, musicBus, pt, 0.08);
+          pt += spb;
+        }
+      } else if(mood.pulse === 'bar'){
+        pulseTick(ctx, musicBus, t + chordSec*0.5, 0.05);
+      }
+
+      // melody: a real tune over the chord. Melody notes are drawn from the
+      // chord tones plus a passing tone, and placed on the beat grid — so it
+      // sounds like a line, not random plinks.
+      const nMel = mood.melody || 3;
+      for(let k = 0; k < nMel; k++){
+        // deterministic rhythmic position (spread across the chord)
+        const mt = t + chordSec * (k / nMel);
+        // mostly chord tones, occasionally a passing scale tone
+        const usePass = RNG() < 0.25;
+        let m;
+        if(usePass){
+          m = root + 12 + mood.scale[Math.floor(RNG()*mood.scale.length)];
+        } else {
+          m = notes[Math.floor(RNG()*notes.length)] + 12;
+        }
+        // slight humanising offset + varying length
+        const jitter = (RNG()-0.5) * 0.12;
+        const mLen = 1.2 + RNG()*1.8;
+        lead(ctx, verbSend, mt + jitter, m, mLen, 0.05 + RNG()*0.03);
       }
       idx++; bar++;
     }

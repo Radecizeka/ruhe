@@ -1,13 +1,16 @@
 {
   "rain":   ["samples/rain-1.mp3"],
-  "ocean":  ["samples/ocean-1.mp3"],
-  "forest": ["samples/forest-1.mp3", "samples/forest-2.mp3"],
-  "wind":   ["samples/wind-1.mp3", "samples/wind-2.mp3", "samples/wind-3.mp3"],
+  "ocean":  ["samples/ocean-1.mp3", "samples/ocean-2.mp3"],
+  "forest": ["samples/forest-1.mp3", "samples/forest-2.mp3", "samples/forest-3.mp3"],
+  "wind":   ["samples/wind-1.mp3", "samples/wind-2.mp3", "samples/wind-3.mp3", "samples/wind-4.mp3"],
   "fire":   ["samples/fire-1.mp3", "samples/fire-2.mp3", "samples/fire-3.mp3"],
   "stream": ["samples/stream-1.mp3", "samples/stream-2.mp3", "samples/stream-3.mp3", "samples/stream-4.mp3"],
-  "night":  ["samples/night-1.mp3", "samples/night-2.mp3"],
-  "storm":  ["samples/storm-1.mp3", "samples/storm-2.mp3"],
-  "cafe":   ["samples/cafe-1.mp3"],
+  "night":  ["samples/night-1.mp3", "samples/night-2.mp3", "samples/night-3.mp3"],
+  "storm":  ["samples/storm-1.mp3", "samples/storm-2.mp3", "samples/storm-3.mp3"],
+  "cafe":   ["samples/cafe-1.mp3", "samples/cafe-2.mp3"],
   "birds":  ["samples/birds-1.mp3", "samples/birds-2.mp3"],
-  "noise":  ["samples/noise-1.mp3", "samples/noise-2.mp3"]
+  "noise":  ["samples/noise-1.mp3", "samples/noise-2.mp3", "samples/noise-3.mp3"],
+  "purr":   ["samples/purr-1.mp3", "samples/purr-2.mp3", "samples/purr-3.mp3", "samples/purr-4.mp3"],
+  "train":  ["samples/train-1.mp3", "samples/train-2.mp3"],
+  "airplane": ["samples/airplane-1.mp3", "samples/airplane-2.mp3", "samples/airplane-3.mp3"]
 }

@@ -1,0 +1,8 @@
+{
+  "calm":     ["music/calm-1.mp3", "music/calm-2.mp3", "music/calm-3.mp3"],
+  "focus":    ["music/focus-1.mp3", "music/focus-2.mp3"],
+  "grounded": ["music/grounded-1.mp3", "music/grounded-2.mp3", "music/grounded-3.mp3"],
+  "unwind":   ["music/unwind-1.mp3", "music/unwind-2.mp3", "music/unwind-3.mp3"],
+  "meditate": ["music/meditate-1.mp3", "music/meditate-2.mp3", "music/meditate-3.mp3"],
+  "dreamy":   ["music/dreamy-1.mp3", "music/dreamy-2.mp3", "music/dreamy-3.mp3"]
+}

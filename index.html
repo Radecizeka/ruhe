@@ -164,6 +164,25 @@
     letter-spacing:0.03em; text-align:center; opacity:0.7; font-weight:300;
   }
   .credits a{ color: var(--faint); }
+
+  /* ---- extend + favorites + timer ---- */
+  .extend{ display:none; margin-top: 18px; }
+  .extend.show{ display:block; }
+  .extend-label{
+    font-size:0.58rem; letter-spacing:0.26em; text-transform:uppercase;
+    color: var(--muted); margin:0 0 10px;
+  }
+  .fav-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .fav{
+    font-family:'Space Mono', monospace; font-size:0.6rem; letter-spacing:0.02em;
+    background:transparent; color:var(--muted);
+    border:1px solid var(--line); border-radius:5px;
+    padding:6px 10px; cursor:pointer;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .fav:hover{ border-color: var(--accent); color: var(--accent); }
+  .fav .del{ margin-left:6px; color:var(--faint); }
+  .fav .del:hover{ color:#b06a6a; }
 </style>
 </head>
 <body>
@@ -228,9 +247,11 @@
   <div class="section">
     <h2>Length</h2>
     <div class="row" id="lenRow">
-      <button class="pill" data-k="len" data-v="60">1 min</button>
-      <button class="pill active" data-k="len" data-v="180">3 min</button>
+      <button class="pill active" data-k="len" data-v="60">1 min</button>
       <button class="pill" data-k="len" data-v="300">5 min</button>
+      <button class="pill" data-k="len" data-v="1200">20 min</button>
+      <button class="pill" data-k="len" data-v="3600">1 hour</button>
+      <button class="pill" data-k="len" data-v="7200">2 hours</button>
     </div>
   </div>
 
@@ -244,10 +265,33 @@
       <span class="mix-label" style="flex:1;">Seed — recreate an exact soundscape</span>
       <input type="text" id="seedInput" class="seed-box" placeholder="random" inputmode="numeric">
     </div>
+    <div class="row" style="margin-top:14px;">
+      <button class="pill active" data-k="animate" data-v="1">Animate — let the mix drift</button>
+      <button class="pill" data-k="animate" data-v="0">Fixed mix</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Focus timer</h2>
+    <div class="row" style="align-items:center;">
+      <button class="pill active" data-k="timer" data-v="25">25 / 5</button>
+      <button class="pill" data-k="timer" data-v="50">50 / 10</button>
+      <span class="amb-status" id="timerDisplay" style="flex:1; text-align:right;">not running</span>
+    </div>
   </div>
 
   <button class="make" id="makeBtn">Make my calm</button>
   <div class="status" id="status"></div>
+
+  <div class="extend" id="extendRow">
+    <div class="extend-label">Keep this one?</div>
+    <div class="row">
+      <button class="pill" data-ext="300">5 min</button>
+      <button class="pill" data-ext="1200">20 min</button>
+      <button class="pill" data-ext="3600">1 hour</button>
+      <button class="pill" data-ext="7200">2 hours</button>
+    </div>
+  </div>
 
   <div class="result" id="result">
     <div class="now">
@@ -259,7 +303,9 @@
       <button class="primary" id="playBtn">&#9654; Play</button>
       <button id="dlBtn">Download WAV</button>
       <button id="shareBtn">Copy link</button>
+      <button id="favBtn">&#9825; Save</button>
     </div>
+    <div class="fav-row" id="favRow"></div>
   </div>
 
   <div class="note">
@@ -303,8 +349,8 @@
   };
 
   // ---------------- state ----------------
-  const opts = { mood:"focus", env:"rain", tuning:"auto", len:180, musicVol:0.75, ambVol:0.75 };
-  let buffer = null;            // rendered AudioBuffer
+  const opts = { mood:"focus", env:"rain", tuning:"auto", len:60, musicVol:0.75, ambVol:0.75, animate:true };
+  let buffer = null;            // rendered AudioBuffer (downloads / synth fallback)
   let playing = false;
   let playSrc = null;
   let liveCtx = null;
@@ -315,19 +361,35 @@
   let musicBuffers = {};        // mood -> array of decoded AudioBuffers (real music)
   let lastUsedMusic = false;    // whether the last render used real music
   let lastSeed = null;          // seed of the most recent soundscape (for share links)
+  let lastTitle = null;         // title of the most recent soundscape
+  let plan = null;              // deterministic plan of the current soundscape
+  let streamNodes = null;       // live nodes of the current stream
+  let streamTimer = null;       // cleanup timer for the stream
+  let streamStopped = false;    // true once the current stream has faded out
+  let timerMode = 25;           // focus timer: work minutes (break = work/5)
+  let timerRunning = false;
+  let timerInterval = null;
+  let timerLeft = 0;            // seconds remaining in current phase
+  let timerPhase = 'work';      // 'work' | 'break'
 
   // ---------------- tuning ----------------
   const TUNINGS = { "432":432, "440":440, "528":528 };
   const mtof = m => REF * Math.pow(2, (m-69)/12);
 
   // ---------------- seeded rng ----------------
+  // The rng exposes .state() so the deterministic plan can snapshot the
+  // stream position — the live stream and the offline download then continue
+  // from the same point and produce the identical piece.
   function mulberry32(seed){
-    return function(){
-      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
-      let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    let s = seed;
+    const next = function(){
+      s |= 0; s = (s + 0x6D2B79F5) | 0;
+      let t = Math.imul(s ^ s >>> 15, 1 | s);
       t = (t + Math.imul(t ^ t >>> 7, 61 | t)) ^ t;
       return ((t ^ t >>> 14) >>> 0) / 4294967296;
     };
+    next.state = ()=> s;
+    return next;
   }
   // ---------------- moods ----------------
   // entrain: subtle amplitude-modulation rate (Hz) applied to the music
@@ -581,15 +643,16 @@
   // Real-sample ambience layer: loops a user-supplied recording under the
   // music. Returns true if a sample was used (so the render knows to skip
   // the synthetic texture). This is the "genuine environment" path.
-  function sampleLayer(ctx, dest, env, t, dur){
+  function sampleLayer(ctx, dest, env, t, dur, b, startOff, levelVar){
     const bufs = sampleBuffers[env];
     if(!bufs || !bufs.length) return false;
-    // VARIATION: pick one random recording + random start offset + slightly
-    // random level each render, so the same environment never sounds the
-    // same twice (scales with more files in samples.json).
-    const b = bufs[Math.floor(RNG()*bufs.length)];
-    const startOff = RNG() * b.duration;
-    const levelVar = 0.42 + RNG()*0.16;                 // 0.42–0.58
+    // Uses the plan's chosen recording + offset + level, so the live
+    // stream and the offline download play the identical ambience.
+    if(b === undefined){
+      b = bufs[Math.floor(RNG()*bufs.length)];
+      startOff = RNG() * b.duration;
+      levelVar = 0.42 + RNG()*0.16;                    // 0.42–0.58
+    }
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
     g.gain.linearRampToValueAtTime(levelVar, t + 2);
@@ -750,10 +813,37 @@
     return (MOODS[o.mood] || MOODS.calm).autoTune;
   }
 
-  function renderSoundscape(seed, o){
-    RNG = mulberry32(seed);
-    REF = TUNINGS[resolveTuning(o)];
+  // Deterministic plan: all the random CHOICES for a soundscape, made up
+  // front (no audio nodes). The live stream and the offline download both
+  // consume this plan, so they produce the identical piece.
+  function buildPlan(seed, o){
+    const rng = mulberry32(seed);
     const mood = MOODS[o.mood];
+    const p = { seed, o, mood };
+    p.breathFreq = 1/(20 + rng()*15);                 // 1 call (same as old render)
+    p.root = mood.root + Math.floor(rng()*5);         // 1 call
+    const bufs = sampleBuffers[o.env] || [];
+    if(bufs.length){
+      p.sampleBuf = bufs[Math.floor(rng()*bufs.length)];
+      p.sampleOff = rng() * p.sampleBuf.duration;
+      p.sampleLev = 0.42 + rng()*0.16;
+    }
+    const tr = musicBuffers[o.mood] || [];
+    if(tr.length){
+      p.musicBuf = tr[Math.floor(rng()*tr.length)];
+      p.musicOff = rng() * p.musicBuf.duration;
+      p.musicLev = 0.85 + rng()*0.15;
+    }
+    p.rngState = rng.state();                         // for synth fallbacks
+    p.hasReal = !!(p.sampleBuf && p.musicBuf);        // streaming-capable
+    return p;
+  }
+
+  function renderSoundscape(plan, o){
+    // Offline render (downloads). Consumes the plan — no choices here.
+    RNG = mulberry32(plan.rngState);                   // synth fallbacks resume deterministically
+    REF = TUNINGS[resolveTuning(o)];
+    const mood = plan.mood;
     const dur = o.len;
     const SRATE = 48000;
     const ctx = new OfflineAudioContext(2, Math.ceil(dur*SRATE), SRATE);
@@ -794,10 +884,11 @@
     const verbIn = ctx.createGain(); verbIn.gain.value = 1;
     verbSend.connect(verb); verb.connect(verbIn); verbIn.connect(musicBus);
 
-    const root = mood.root + Math.floor(RNG()*5);
+    const root = plan.root;
     const chordSec = (60/mood.bpm)*4;
     // real sample ambience if available, otherwise synthesised texture
-    lastUsedSamples = sampleLayer(ctx, ambBus, o.env, 0, dur);
+    lastUsedSamples = sampleLayer(ctx, ambBus, o.env, 0, dur,
+      plan.sampleBuf, plan.sampleOff, plan.sampleLev);
     if(!lastUsedSamples){
       texture(ctx, ambBus, o.env, 0, dur);
     }
@@ -807,13 +898,10 @@
     const mTracks = musicBuffers[o.mood] || [];
     if(mTracks.length){
       lastUsedMusic = true;
-      // VARIATION: pick a random track + random start offset + slightly
-      // random level each render, so the same mood never sounds identical
-      // twice (and it scales: more tracks in music.json = more variety).
-      const b = mTracks[Math.floor(RNG()*mTracks.length)];
+      const b = plan.musicBuf || mTracks[0];
       const loopLen = b.duration;
-      const startOff = RNG() * loopLen;
-      const levelVar = 0.85 + RNG()*0.15;               // 0.85–1.0
+      const startOff = plan.musicOff || 0;
+      const levelVar = plan.musicLev || 0.9;
       const mg = ctx.createGain();
       mg.gain.setValueAtTime(0.0001, 0);
       mg.gain.linearRampToValueAtTime(levelVar, 2);
@@ -901,6 +989,121 @@
     return ctx.startRendering();
   }
 
+  // ---------------- live streaming ----------------
+  // Plays the same plan on a live AudioContext: the music track and the
+  // ambience recording are simply looped (with crossfade + offset), plus the
+  // entrainment LFO and a slow breath. Starts in under a second and can run
+  // for hours — nothing is pre-rendered, so no memory blow-up.
+  function startStreaming(plan, o, extendSecs){
+    const ctx = ensureLiveCtx();
+    if(ctx.state === 'suspended') ctx.resume();   // iOS: resume after async load
+    const mood = plan.mood;
+    stopStreaming(false);
+
+    const master = ctx.createGain(); master.gain.value = 0.85;
+    const musicBus = ctx.createGain(); musicBus.gain.value = o.musicVol;
+    const ambBus = ctx.createGain(); ambBus.gain.value = o.ambVol;
+    musicBus.connect(master); ambBus.connect(master);
+
+    // entrainment: sub-perceptual AM on the music bus
+    if(mood.entrain){
+      const entOsc = ctx.createOscillator(); entOsc.frequency.value = mood.entrain;
+      const entG = ctx.createGain(); entG.gain.value = 0.04;
+      entOsc.connect(entG); entG.connect(musicBus.gain);
+      entOsc.start();
+    }
+    // animate: slow out-of-phase drift between music and ambience
+    let anim1 = null, anim2 = null;
+    if(o.animate){
+      anim1 = ctx.createOscillator(); anim1.frequency.value = 1/47;
+      const a1 = ctx.createGain(); a1.gain.value = 0.10;
+      anim1.connect(a1); a1.connect(musicBus.gain); anim1.start();
+      anim2 = ctx.createOscillator(); anim2.frequency.value = 1/53;
+      const a2 = ctx.createGain(); a2.gain.value = 0.08;
+      anim2.connect(a2); a2.connect(ambBus.gain); anim2.start();
+    }
+
+    // breath: slow overall swell
+    const breath = ctx.createOscillator(); breath.frequency.value = plan.breathFreq;
+    const bg = ctx.createGain(); bg.gain.value = 0.06;
+    breath.connect(bg); bg.connect(master.gain); breath.start();
+
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.ratio.value = 3; comp.attack.value = 0.02; comp.release.value = 0.3;
+    master.connect(comp); comp.connect(ctx.destination);
+
+    const now = ctx.currentTime + 0.05;
+    const dur = extendSecs || o.len;
+
+    // fade in
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.linearRampToValueAtTime(0.85, now + 2);
+
+    // ---- ambience loop ----
+    if(plan.sampleBuf){
+      const s = ctx.createBufferSource(); s.buffer = plan.sampleBuf; s.loop = true;
+      s.loopStart = 0; s.loopEnd = plan.sampleBuf.duration;
+      const g = ctx.createGain(); g.gain.value = plan.sampleLev;
+      s.connect(g); g.connect(ambBus);
+      s.start(now, plan.sampleOff);
+      s.stop(now + dur + 6);
+    }
+
+    // ---- music loop (crossfaded) ----
+    if(plan.musicBuf){
+      const b = plan.musicBuf;
+      const loopLen = b.duration;
+      const mg = ctx.createGain(); mg.gain.value = plan.musicLev;
+      mg.connect(musicBus);
+      const fade = Math.min(3, Math.max(0.5, loopLen*0.15));
+      const seg = Math.max(1, loopLen - fade);
+      let k = 0;
+      for(let st = 0; st < dur + 6; st += seg){
+        const s = ctx.createBufferSource(); s.buffer = b;
+        s.loop = true; s.loopStart = 0; s.loopEnd = loopLen;
+        const g = ctx.createGain();
+        const end = now + Math.min(dur + 6, st + loopLen);
+        const t0 = now + st;
+        g.gain.setValueAtTime(0.0001, Math.max(now, t0));
+        g.gain.linearRampToValueAtTime(1, t0 + fade*0.5);
+        g.gain.setValueAtTime(1, Math.max(t0 + fade*0.5, end - fade*0.5));
+        g.gain.linearRampToValueAtTime(0.0001, end);
+        s.connect(g); g.connect(mg);
+        s.start(t0, plan.musicOff + k*seg);
+        s.stop(end + 0.5);
+        k++;
+      }
+    }
+
+    // fade out at the end
+    const endT = now + dur;
+    master.gain.setValueAtTime(0.85, Math.max(now + 2, endT - 4));
+    master.gain.linearRampToValueAtTime(0.0001, endT);
+
+    // cleanup at end: mark stopped, re-enable UI
+    streamTimer = setTimeout(()=>{
+      stopStreaming(false);
+      streamStopped = true;
+      playing = false;
+      playBtn.innerHTML = '&#9654; Play';
+      showExtend();
+    }, (dur + 1) * 1000);
+
+    streamNodes = [master, musicBus, ambBus, comp];
+    streamStopped = false;
+    playing = true;
+    playBtn.innerHTML = '&#9632; Stop';
+  }
+
+  function stopStreaming(clearExtend){
+    if(streamTimer){ clearTimeout(streamTimer); streamTimer = null; }
+    if(streamNodes){
+      streamNodes.forEach(n => { try{ n.disconnect(); }catch(e){} });
+      streamNodes = null;
+    }
+    if(clearExtend !== false) hideExtend();
+  }
+
   // ---------------- wav encode ----------------
   function writeStr(view, off, str){ for(let i=0;i<str.length;i++) view.setUint8(off+i, str.charCodeAt(i)); }
   function encodeWav(buf){
@@ -926,13 +1129,15 @@
   }
 
   // ---------------- ui ----------------
-  document.querySelectorAll('.pill').forEach(p => {
+  document.querySelectorAll('.pill[data-k]').forEach(p => {
     p.addEventListener('click', ()=>{
       const k = p.dataset.k;
       document.querySelectorAll('.pill[data-k="'+k+'"]').forEach(x=>x.classList.remove('active'));
       p.classList.add('active');
-      opts[k] = p.dataset.v;
-      if(k === 'len') opts.len = parseInt(p.dataset.v, 10);
+      if(k === 'len'){ opts.len = parseInt(p.dataset.v, 10); }
+      else if(k === 'animate'){ opts.animate = p.dataset.v === '1'; }
+      else if(k === 'timer'){ timerMode = parseInt(p.dataset.v, 10); }
+      else { opts[k] = p.dataset.v; }
     });
   });
 
@@ -1003,7 +1208,7 @@
       let loaded = 0;
       for(const path of files){
         try{
-          const r = await fetch(path, { cache:'no-store' });
+          const r = await fetch(path);   // MP3s: browser-cached for fast repeat visits
           if(!r.ok) continue;
           const ab = await r.arrayBuffer();
           const buf = await ctx.decodeAudioData(ab);
@@ -1034,7 +1239,7 @@
       let loaded = 0;
       for(const path of files){
         try{
-          const r = await fetch(path, { cache:'no-store' });
+          const r = await fetch(path);   // MP3s: browser-cached for fast repeat visits
           if(!r.ok) continue;
           const ab = await r.arrayBuffer();
           const buf = await ctx.decodeAudioData(ab);
@@ -1058,6 +1263,7 @@
 
   function stopPlayback(){
     if(playSrc){ try{ playSrc.stop(); }catch(e){} playSrc = null; }
+    if(streamNodes){ stopStreaming(true); setStatus('stopped.'); }
     playing = false;
     playBtn.innerHTML = '&#9654; Play';
   }
@@ -1065,6 +1271,7 @@
   async function make(){
     makeBtn.disabled = true;
     resultEl.classList.remove('show');
+    hideExtend();
     stopPlayback();
     // seed: use the typed value if valid, else a fresh random one
     const typed = parseInt(seedInput.value, 10);
@@ -1074,41 +1281,71 @@
     // build a title from its own rng, independent of the render's rng
     const r = mulberry32(seed);
     const pickLocal = a => a[Math.floor(r()*a.length)];
-    const tName = pickLocal(mood.adj) + ' ' + pickLocal(mood.noun);
-    setStatus('loading ambience…');
+    lastTitle = pickLocal(mood.adj) + ' ' + pickLocal(mood.noun);
+    setStatus('loading…');
     await ensureSamples(opts.env);
-    setStatus('loading music…');
     await ensureMusic(opts.mood);
-    setStatus('composing…');
 
-    // yield so the status paints
-    await new Promise(res => setTimeout(res, 20));
-
-    const t0 = performance.now();
-    let ms = 0;
-    try{
-      buffer = await renderSoundscape(seed, opts);
-      ms = Math.round(performance.now() - t0);
-    }catch(err){
-      console.error(err);
-      setStatus('render failed — try again (shorter length helps).');
-      makeBtn.disabled = false;
-      return;
-    }
+    // deterministic plan: the choices both stream and download share
+    plan = buildPlan(seed, opts);
 
     const tuned = resolveTuning(opts);
-    document.getElementById('nowTitle').textContent = tName;
+    document.getElementById('nowTitle').textContent = lastTitle;
     document.getElementById('nowMeta').innerHTML =
       'seed #'+seed+'<br>'+
       tuned+' Hz'+(opts.tuning === 'auto' ? ' (auto)' : '')+' &middot; '+opts.mood+' &middot; '+opts.env+'<br>'+
-      (lastUsedSamples ? 'real ambience' : 'generated ambience')+' &middot; '+
-      (lastUsedMusic ? 'real music' : 'generated music')+' &middot; '+
-      Math.round(opts.len/60*10)/10+' min &middot; rendered in '+ms+'ms';
+      (plan.sampleBuf ? 'real ambience' : 'generated ambience')+' &middot; '+
+      (plan.musicBuf ? 'real music' : 'generated music')+' &middot; '+
+      fmtLen(opts.len)+(opts.animate ? ' &middot; drifting' : '');
 
     resultEl.classList.add('show');
-    drawWave();
-    setStatus('done — press play, or download the WAV.');
     makeBtn.disabled = false;
+
+    if(plan.hasReal){
+      // STREAMING: real music + real recording — start instantly, no render.
+      buffer = null;
+      const cv = document.getElementById('wave');
+      cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+      setStatus('playing — streams live, up to '+fmtLen(opts.len)+'.');
+      startStreaming(plan, opts);
+    }else{
+      // Synth-only piece (e.g. generated ambience envs): short offline render.
+      // Honest limit: offline render holds the whole piece in memory, so cap
+      // at 5 minutes for now (2 h stereo ≈ 5.5 GB RAM — phones would die).
+      if(opts.len > 300){
+        opts.len = 300;
+        document.querySelectorAll('.pill[data-k="len"]').forEach(x=>{
+          x.classList.toggle('active', parseInt(x.dataset.v, 10) === 300);
+        });
+      }
+      setStatus('composing…');
+      await new Promise(res => setTimeout(res, 20));
+      const t0 = performance.now();
+      try{
+        buffer = await renderSoundscape(plan, opts);
+        const ms = Math.round(performance.now() - t0);
+        lastUsedSamples = !!plan.sampleBuf;
+        lastUsedMusic = !!plan.musicBuf;
+        document.getElementById('nowMeta').innerHTML =
+          'seed #'+seed+'<br>'+
+          tuned+' Hz'+(opts.tuning === 'auto' ? ' (auto)' : '')+' &middot; '+opts.mood+' &middot; '+opts.env+'<br>'+
+          (lastUsedSamples ? 'real ambience' : 'generated ambience')+' &middot; '+
+          (lastUsedMusic ? 'real music' : 'generated music')+' &middot; '+
+          fmtLen(opts.len)+' &middot; rendered in '+ms+'ms';
+        drawWave();
+        setStatus('done — press play, or download the WAV.');
+      }catch(err){
+        console.error(err);
+        setStatus('render failed — try again (shorter length helps).');
+        return;
+      }
+    }
+  }
+
+  function fmtLen(sec){
+    if(sec >= 3600 && sec % 3600 === 0) return (sec/3600)+' hr';
+    if(sec >= 60 && sec % 60 === 0) return (sec/60)+' min';
+    return sec+' s';
   }
 
   function drawWave(){
@@ -1140,7 +1377,16 @@
   }
 
   playBtn.addEventListener('click', ()=>{
-    if(!buffer) return;
+    if(streamNodes){
+      // streaming session active: stop it
+      stopPlayback();
+      return;
+    }
+    if(!buffer){
+      // stream finished or was stopped: restart the same piece
+      if(plan && plan.hasReal){ startStreaming(plan, opts); }
+      return;
+    }
     if(playing){ stopPlayback(); return; }
     const ctx = ensureLiveCtx();
     if(ctx.state === 'suspended') ctx.resume();
@@ -1153,16 +1399,165 @@
     playBtn.innerHTML = '&#9632; Stop';
   });
 
-  dlBtn.addEventListener('click', ()=>{
-    if(!buffer) return;
-    const blob = encodeWav(buffer);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'ruhe-' + Date.now() + '-' + resolveTuning(opts) + 'hz.wav';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 4000);
-    setStatus('saved — it is yours now.');
+  dlBtn.addEventListener('click', async ()=>{
+    if(!plan) return;
+    // honest limit: a long WAV is huge (2 h ≈ 2.7 GB) and can crash phones —
+    // cap the offline render at 20 minutes for now.
+    const renderLen = Math.min(opts.len, 1200);
+    makeBtn.disabled = true;
+    setStatus('rendering WAV…' + (opts.len > 1200 ? ' (capped at 20 min — longer is stream-only for now)' : ''));
+    await new Promise(res => setTimeout(res, 20));
+    try{
+      const t0 = performance.now();
+      const o2 = Object.assign({}, opts, { len: renderLen });
+      const buf = await renderSoundscape(plan, o2);
+      const ms = Math.round(performance.now() - t0);
+      const blob = encodeWav(buf);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'ruhe-seed' + plan.seed + '-' + resolveTuning(opts) + 'hz.wav';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 4000);
+      setStatus('saved — it is yours now. (rendered in '+ms+'ms)');
+    }catch(err){
+      console.error(err);
+      setStatus('download failed — shorter lengths render more reliably.');
+    }
+    makeBtn.disabled = false;
+  });
+
+  // ---- extend: keep the same piece, just longer ----
+  const extendRow = document.getElementById('extendRow');
+  function showExtend(){ extendRow.classList.add('show'); }
+  function hideExtend(){ extendRow.classList.remove('show'); }
+  document.querySelectorAll('#extendRow .pill').forEach(b => {
+    b.addEventListener('click', ()=>{
+      if(!plan) return;
+      hideExtend();
+      // same seed + same settings, only the length changes — the piece
+      // continues seamlessly because the plan is identical.
+      opts.len = parseInt(b.dataset.ext, 10);
+      document.querySelectorAll('.pill[data-k="len"]').forEach(x=>{
+        x.classList.toggle('active', parseInt(x.dataset.v, 10) === opts.len);
+      });
+      startStreaming(plan, opts);
+      setStatus('kept — now playing for '+fmtLen(opts.len)+'.');
+    });
+  });
+
+  // ---- favorites (localStorage, no backend) ----
+  const favBtn = document.getElementById('favBtn');
+  const favRow = document.getElementById('favRow');
+  function loadFavs(){
+    try{ return JSON.parse(localStorage.getItem('ruhe-favs') || '[]'); }
+    catch(e){ return []; }
+  }
+  function saveFavs(f){ localStorage.setItem('ruhe-favs', JSON.stringify(f)); }
+  function renderFavs(){
+    favRow.innerHTML = '';
+    const favs = loadFavs();
+    if(!favs.length) return;
+    favs.forEach((f, i) => {
+      const b = document.createElement('button');
+      b.className = 'fav';
+      b.textContent = '#'+f.seed+' '+f.title;
+      const del = document.createElement('span');
+      del.className = 'del';
+      del.textContent = '×';
+      b.appendChild(del);
+      b.addEventListener('click', (e)=>{
+        if(e.target === del){
+          favs.splice(i, 1);
+          saveFavs(favs);
+          renderFavs();
+          return;
+        }
+        opts.mood = f.mood; opts.env = f.env; opts.tuning = f.tuning;
+        opts.len = f.len; opts.musicVol = f.musicVol; opts.ambVol = f.ambVol;
+        opts.animate = f.animate !== false;
+        applyPill('mood', f.mood); applyPill('env', f.env);
+        applyPill('tuning', f.tuning);
+        applyPill('len', String(f.len));
+        applyPill('animate', f.animate === false ? '0' : '1');
+        musicVolEl.value = Math.round(f.musicVol*100);
+        ambVolEl.value = Math.round(f.ambVol*100);
+        seedInput.value = f.seed;
+        make();
+      });
+      favRow.appendChild(b);
+    });
+  }
+  favBtn.addEventListener('click', ()=>{
+    if(!plan || !lastSeed) return;
+    const favs = loadFavs();
+    if(!favs.some(f => f.seed === lastSeed)){
+      favs.unshift({
+        seed: lastSeed, title: lastTitle,
+        mood: opts.mood, env: opts.env, tuning: opts.tuning, len: opts.len,
+        musicVol: opts.musicVol, ambVol: opts.ambVol, animate: opts.animate
+      });
+      saveFavs(favs.slice(0, 12));
+      renderFavs();
+      setStatus('saved to your favorites.');
+    }else{
+      setStatus('already in favorites.');
+    }
+  });
+  renderFavs();
+
+  // ---- focus timer (Pomodoro) ----
+  const timerDisplay = document.getElementById('timerDisplay');
+  function fmtClock(s){
+    const m = Math.floor(s/60), ss = s%60;
+    return m + ':' + (ss < 10 ? '0' : '') + ss;
+  }
+  function chime(){
+    const ctx = ensureLiveCtx();
+    if(ctx.state === 'suspended') ctx.resume();
+    const t = ctx.currentTime;
+    [523.25, 659.25, 783.99].forEach((f, i) => {
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t + i*0.22);
+      g.gain.exponentialRampToValueAtTime(0.16, t + i*0.22 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + i*0.22 + 1.4);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(t + i*0.22); o.stop(t + i*0.22 + 1.5);
+    });
+  }
+  function timerTick(){
+    if(timerLeft > 0){
+      timerLeft--;
+      timerDisplay.textContent = (timerPhase === 'work' ? 'focus ' : 'break ') + fmtClock(timerLeft);
+      return;
+    }
+    // phase ended
+    chime();
+    if(timerPhase === 'work'){
+      timerPhase = 'break';
+      timerLeft = Math.max(5, Math.round(timerMode/5))*60;
+      timerDisplay.textContent = 'break ' + fmtClock(timerLeft);
+    }else{
+      stopTimer();
+      timerDisplay.textContent = 'done — take a real pause.';
+    }
+  }
+  function startTimer(){
+    if(timerRunning) return;
+    timerRunning = true;
+    timerPhase = 'work';
+    timerLeft = timerMode*60;
+    timerInterval = setInterval(timerTick, 1000);
+    timerDisplay.textContent = 'focus ' + fmtClock(timerLeft);
+  }
+  function stopTimer(){
+    timerRunning = false;
+    if(timerInterval){ clearInterval(timerInterval); timerInterval = null; }
+  }
+  timerDisplay.addEventListener('click', ()=>{
+    if(timerRunning){ stopTimer(); timerDisplay.textContent = 'not running'; }
+    else startTimer();
   });
 
   // ---- share link: encode the full state into the URL ----
@@ -1207,7 +1602,12 @@
     if(q.has('mood')) applyPill('mood', q.get('mood'));
     if(q.has('env')) applyPill('env', q.get('env'));
     if(q.has('tuning')) applyPill('tuning', q.get('tuning'));
-    if(q.has('len')) applyPill('len', q.get('len'));
+    if(q.has('len')){
+      const L = parseInt(q.get('len'), 10);
+      const pill = document.querySelector('.pill[data-k="len"][data-v="'+L+'"]');
+      if(pill){ pill.click(); }
+      else { opts.len = Math.max(60, Math.min(7200, L)); }   // old links keep working
+    }
     if(q.has('music')){ const v = parseInt(q.get('music'),10); if(v>=0 && v<=100){ opts.musicVol = v/100; musicVolEl.value = v; } }
     if(q.has('amb')){ const v = parseInt(q.get('amb'),10); if(v>=0 && v<=100){ opts.ambVol = v/100; ambVolEl.value = v; } }
     if(q.has('s')){ seedInput.value = q.get('s'); make(); }

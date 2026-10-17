@@ -994,7 +994,7 @@
   // ambience recording are simply looped (with crossfade + offset), plus the
   // entrainment LFO and a slow breath. Starts in under a second and can run
   // for hours — nothing is pre-rendered, so no memory blow-up.
-  function startStreaming(plan, o, extendSecs){
+  function startStreaming(plan, o){
     const ctx = ensureLiveCtx();
     if(ctx.state === 'suspended') ctx.resume();   // iOS: resume after async load
     const mood = plan.mood;
@@ -1033,7 +1033,7 @@
     master.connect(comp); comp.connect(ctx.destination);
 
     const now = ctx.currentTime + 0.05;
-    const dur = extendSecs || o.len;
+    const dur = o.len;
 
     // fade in
     master.gain.setValueAtTime(0.0001, now);

@@ -8,143 +8,173 @@
 <meta property="og:title" content="Ruhe — calm for your waking hours">
 <meta property="og:description" content="A personal calm soundscape for focus, unwinding and meditation. Rain, ocean, fire, café, purring and more — with music tuned to your choice, never the same twice.">
 <meta property="og:type" content="website">
-<meta name="theme-color" content="#0b0d10">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Space+Mono:wght@400;700&display=swap">
+<meta name="theme-color" content="#0a0d0c">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=Outfit:wght@300;400;500&family=Space+Mono:wght@400&display=swap">
 <style>
   :root{
     color-scheme:dark;
-    --ink:#0b0d10;
-    --paper:#e9e4d6;
-    --signal:#f78f44;
-    --amber:#f5b24d;
-    --muted:#8b877b;
-    --line: rgba(233,228,214,0.12);
-    --panel: rgba(20,22,26,0.7);
+    --bg:#0a0d0c;
+    --ink:#e8e6df;          /* warm off-white text */
+    --muted:#858a81;
+    --faint:#565b53;
+    --accent:#b9a678;       /* muted brass */
+    --line: rgba(232,230,223,0.10);
+    --line-strong: rgba(232,230,223,0.20);
   }
   *{box-sizing:border-box;}
   html,body{ margin:0; padding:0; min-height:100%; }
   body{
     background:
-      radial-gradient(1200px 700px at 50% -10%, rgba(247,143,68,0.08), transparent 60%),
-      radial-gradient(900px 600px at 85% 110%, rgba(245,178,77,0.06), transparent 55%),
-      var(--ink);
-    color: var(--paper);
-    font-family:'Space Mono', ui-monospace, Menlo, Consolas, monospace;
+      radial-gradient(1300px 620px at 50% -18%, rgba(255,255,255,0.045), transparent 62%),
+      linear-gradient(158deg, #0c100e 0%, #0a0d0c 46%, #0e1210 100%);
+    color: var(--ink);
+    font-family:'Outfit', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-weight:300;
     display:flex; justify-content:center;
-    padding: 32px 16px 60px;
+    padding: 48px 18px 64px;
   }
-  .wrap{ width:100%; max-width:560px; }
+  .wrap{ width:100%; max-width:600px; }
 
-  header{ margin-bottom: 22px; }
+  /* ---- header ---- */
+  header{ margin-bottom: 34px; }
   header h1{
-    font-family:'Fraunces', Georgia, serif; font-style:italic; font-weight:600;
-    font-size: clamp(2rem, 7vw, 2.7rem); margin:0; letter-spacing:0.01em;
+    font-family:'Fraunces', Georgia, serif; font-weight:400;
+    font-size:1.55rem; margin:0; letter-spacing:0.42em; text-transform:uppercase;
   }
-  header .tagline{ color: var(--muted); font-size:0.72rem; letter-spacing:0.04em; margin-top:6px; }
+  header .tagline{
+    color: var(--faint); font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase;
+    margin-top:10px;
+  }
+  header .rule{
+    margin-top:22px; height:1px;
+    background: linear-gradient(90deg, var(--line-strong), transparent 85%);
+  }
 
-  .card{
-    background: var(--panel);
-    border:1px solid var(--line);
-    border-radius: 14px;
-    padding: 16px 16px;
-    margin-bottom: 14px;
+  /* ---- sections ---- */
+  .section{ margin: 0 0 26px; }
+  .section h2{
+    display:flex; align-items:center; gap:14px;
+    font-size:0.58rem; letter-spacing:0.26em; text-transform:uppercase;
+    color: var(--muted); font-weight:400; margin:0 0 14px;
   }
-  .card h2{
-    font-size:0.62rem; letter-spacing:0.16em; text-transform:uppercase;
-    color: var(--amber); margin:0 0 10px; font-weight:400;
-  }
-  .row{ display:flex; flex-wrap:wrap; gap:7px; }
+  .section h2::after{ content:""; flex:1; height:1px; background: var(--line); }
+
+  .row{ display:flex; flex-wrap:wrap; gap:8px; }
   .pill{
-    font-family:inherit; font-size:0.72rem; letter-spacing:0.03em;
-    background:transparent; color:var(--paper);
-    border:1px solid var(--line); border-radius: 20px;
-    padding: 7px 12px; cursor:pointer;
+    font-family:inherit; font-size:0.72rem; letter-spacing:0.03em; font-weight:400;
+    background:transparent; color:var(--muted);
+    border:1px solid var(--line); border-radius: 5px;
+    padding: 7px 13px; cursor:pointer;
     transition: border-color .15s ease, color .15s ease, background .15s ease;
   }
-  .pill:hover{ border-color: var(--signal); }
-  .pill.active{ background: var(--signal); border-color: var(--signal); color:#100b0a; font-weight:700; }
+  .pill:hover{ border-color: var(--line-strong); color: var(--ink); }
+  .pill.active{ background: rgba(185,166,120,0.13); border-color: var(--accent); color: var(--ink); }
 
+  /* ---- primary action ---- */
   .make{
-    width:100%; border:none; border-radius: 14px;
-    padding: 18px; font-family:inherit; font-size:1rem; font-weight:700;
-    letter-spacing:0.02em; cursor:pointer;
-    background: var(--signal); color:#100b0a;
-    box-shadow: 0 8px 28px rgba(247,143,68,0.28);
-    transition: transform .12s ease, opacity .2s ease;
+    width:100%; border:1px solid var(--line-strong); border-radius: 5px;
+    padding: 16px; font-family:inherit; font-size:0.7rem; font-weight:400;
+    letter-spacing:0.24em; text-transform:uppercase; cursor:pointer;
+    background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.005));
+    color: var(--ink);
+    transition: border-color .2s ease, color .2s ease, background .2s ease;
   }
-  .make:active{ transform: scale(0.985); }
-  .make:disabled{ opacity:0.5; cursor:wait; }
+  .make:hover{ border-color: var(--accent); color: var(--accent); background: rgba(185,166,120,0.07); }
+  .make:active{ transform: translateY(1px); }
+  .make:disabled{ opacity:0.4; cursor:wait; }
 
-  .result{ display:none; margin-top: 18px; }
+  /* ---- result ---- */
+  .result{
+    display:none; margin-top: 26px;
+    border-top:1px solid var(--line-strong); border-bottom:1px solid var(--line);
+    padding: 20px 0;
+  }
   .result.show{ display:block; }
   .now{
     display:flex; align-items:baseline; justify-content:space-between; gap:12px;
-    border-bottom:1px solid var(--line); padding-bottom: 14px;
   }
-  .now .title{ font-family:'Fraunces', Georgia, serif; font-style:italic; font-weight:600; font-size:1.4rem; }
-  .now .meta{ color: var(--muted); font-size:0.68rem; letter-spacing:0.06em; text-align:right; line-height:1.7; }
+  .now .title{
+    font-family:'Fraunces', Georgia, serif; font-weight:300;
+    font-size:1.45rem; color: var(--ink);
+  }
+  .now .meta{
+    font-family:'Space Mono', monospace;
+    color: var(--faint); font-size:0.6rem; line-height:1.9; text-align:right;
+  }
 
-  .player{ display:flex; gap:10px; margin-top:14px; }
+  .wave{ width:100%; height:46px; margin-top:16px; opacity:0.75; }
+
+  .player{ display:flex; gap:1px; margin-top:16px; }
   .player button{
-    font-family:inherit; font-size:0.74rem; letter-spacing:0.04em;
-    background:transparent; color:var(--paper); border:1px solid var(--line);
-    border-radius: 10px; padding: 11px 16px; cursor:pointer; flex:1;
+    font-family:inherit; font-size:0.62rem; letter-spacing:0.2em; text-transform:uppercase; font-weight:400;
+    background:transparent; color:var(--muted);
+    border:1px solid var(--line); border-radius:0; padding: 12px 14px; cursor:pointer; flex:1;
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
   }
-  .player button:hover{ border-color: var(--amber); color: var(--amber); }
-  .player button.primary{ background: var(--amber); border-color: var(--amber); color:#100b0a; font-weight:700; }
-  .player button.primary:hover{ color:#100b0a; }
+  .player button:hover{ color: var(--ink); border-color: var(--line-strong); }
+  .player button.primary{ color: var(--ink); background: rgba(255,255,255,0.03); }
+  .player button.primary:hover{ background: rgba(185,166,120,0.10); color: var(--accent); }
 
+  /* ---- status / meta ---- */
   .status{
-    margin-top: 12px; font-size:0.66rem; letter-spacing:0.04em; color: var(--muted);
-    min-height:1.2em;
+    margin-top: 14px; font-family:'Space Mono', monospace;
+    font-size:0.6rem; letter-spacing:0.06em; color: var(--faint); min-height:1.2em;
   }
-  .amb-status{ font-size:0.62rem; letter-spacing:0.03em; color: var(--muted); }
-  .credits{
-    margin-top: 16px; font-size:0.58rem; line-height:1.7; color: var(--muted);
-    letter-spacing:0.03em; text-align:center; opacity:0.75;
+  .amb-status{ font-family:'Space Mono', monospace; font-size:0.58rem; letter-spacing:0.05em; color: var(--faint); }
+
+  /* ---- mix ---- */
+  .mix-row{ display:flex; gap:22px; align-items:center; }
+  .mix-label{
+    font-size:0.6rem; letter-spacing:0.18em; text-transform:uppercase;
+    color: var(--muted); display:flex; align-items:center; gap:12px; flex:1; font-weight:400;
   }
-  .credits a{ color: var(--muted); }
-  .mix-row{ display:flex; gap:16px; align-items:center; }
-  .mix-label{ font-size:0.66rem; letter-spacing:0.04em; color: var(--muted); display:flex; align-items:center; gap:8px; flex:1; }
-  input[type=range]{ flex:1; accent-color: var(--amber); height:20px; }
+  input[type=range]{ flex:1; accent-color: var(--accent); height:18px; }
   .seed-box{
-    font-family:inherit; font-size:0.72rem; color:var(--paper); background:#16140f;
-    border:1px solid var(--line); border-radius:8px; padding:6px 9px; width:120px; text-align:right;
+    font-family:'Space Mono', monospace; font-size:0.66rem; color:var(--ink);
+    background:rgba(255,255,255,0.02);
+    border:1px solid var(--line); border-radius:5px; padding:7px 10px; width:130px; text-align:right;
   }
-  .seed-box:focus{ outline:1px solid var(--amber); border-color: var(--amber); }
+  .seed-box:focus{ outline:none; border-color: var(--accent); }
+
+  /* ---- support ---- */
   .support{
-    margin-top: 22px;
-    background: var(--panel);
-    border:1px solid var(--line);
-    border-radius: 14px;
-    padding: 20px 18px;
+    margin-top: 34px; padding-top: 24px; border-top:1px solid var(--line);
   }
-  .support h2{ font-family:'Fraunces', Georgia, serif; font-style:italic; font-weight:600; font-size:1.15rem; margin:0 0 8px; color:var(--paper); }
-  .support-text{ margin:0 0 14px; color: var(--muted); font-size:0.7rem; line-height:1.6; }
+  .support h2{
+    font-family:'Fraunces', Georgia, serif; font-weight:300; font-size:1.05rem; margin:0 0 8px; color:var(--ink);
+  }
+  .support-text{ margin:0 0 16px; color: var(--muted); font-size:0.68rem; line-height:1.7; font-weight:300; }
   .support-btn{
-    font-size:0.74rem; letter-spacing:0.04em;
-    color: var(--paper); text-decoration:none;
-    border:1px solid var(--line); border-radius:10px;
+    font-size:0.6rem; letter-spacing:0.2em; text-transform:uppercase;
+    color: var(--muted); text-decoration:none;
+    border:1px solid var(--line); border-radius:5px;
     padding: 10px 16px; cursor:pointer;
     transition: border-color .15s ease, color .15s ease;
   }
-  .support-btn:hover{ border-color: var(--amber); color: var(--amber); }
-  .support-hint{ margin: 12px 0 0; font-size:0.6rem; letter-spacing:0.03em; color: var(--muted); }
+  .support-btn:hover{ border-color: var(--accent); color: var(--accent); }
+  .support-hint{ margin: 12px 0 0; font-family:'Space Mono', monospace; font-size:0.58rem; letter-spacing:0.05em; color: var(--faint); }
+
+  /* ---- footer ---- */
   .note{
-    margin-top: 22px; font-size:0.62rem; line-height:1.7; color: var(--muted);
-    letter-spacing:0.03em;
+    margin-top: 30px; font-size:0.62rem; line-height:1.9; color: var(--faint);
+    letter-spacing:0.03em; font-weight:300;
   }
-  .wave{ width:100%; height:46px; margin-top:14px; opacity:0.7; }
+  .credits{
+    margin-top: 18px; font-size:0.56rem; line-height:1.9; color: var(--faint);
+    letter-spacing:0.03em; text-align:center; opacity:0.7; font-weight:300;
+  }
+  .credits a{ color: var(--faint); }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1>Ruhe</h1>
-    <div class="tagline">calm for your waking hours &mdash; made for you, never the same twice</div>
+    <div class="tagline">calm for your waking hours</div>
+    <div class="rule"></div>
   </header>
 
-  <div class="card">
+  <div class="section">
     <h2>Mood</h2>
     <div class="row" id="moodRow">
       <button class="pill active" data-k="mood" data-v="focus">Focus</button>
@@ -156,7 +186,7 @@
     </div>
   </div>
 
-  <div class="card">
+  <div class="section">
     <h2>Environment</h2>
     <div class="row" id="envRow">
       <button class="pill active" data-k="env" data-v="rain">Rain</button>
@@ -178,15 +208,15 @@
       <button class="pill" data-k="env" data-v="heartbeat">Heartbeat</button>
     </div>
     <div class="row" style="margin-top:12px; align-items:center;">
-      <button class="pill" id="ambBtn">Add real ambience…</button>
+      <button class="pill" id="ambBtn">Add recordings…</button>
       <button class="pill" id="ambClear">Clear</button>
       <span class="amb-status" id="ambStatus">generated ambience (no recordings yet)</span>
       <input type="file" id="ambInput" accept="audio/*" multiple hidden>
     </div>
   </div>
 
-  <div class="card">
-    <h2>Tuning &nbsp;(A4 reference)</h2>
+  <div class="section">
+    <h2>Tuning · A4 reference</h2>
     <div class="row" id="tuneRow">
       <button class="pill active" data-k="tuning" data-v="auto">Auto</button>
       <button class="pill" data-k="tuning" data-v="432">432 Hz</button>
@@ -195,7 +225,7 @@
     </div>
   </div>
 
-  <div class="card">
+  <div class="section">
     <h2>Length</h2>
     <div class="row" id="lenRow">
       <button class="pill" data-k="len" data-v="60">1 min</button>
@@ -204,14 +234,14 @@
     </div>
   </div>
 
-  <div class="card">
+  <div class="section">
     <h2>Mix</h2>
     <div class="mix-row">
       <label class="mix-label">Music <input type="range" id="musicVol" min="0" max="100" value="75"></label>
       <label class="mix-label">Ambience <input type="range" id="ambVol" min="0" max="100" value="75"></label>
     </div>
-    <div class="mix-row" style="margin-top:12px; align-items:center;">
-      <span class="mix-label" style="flex:1;">Seed (recreate an exact soundscape)</span>
+    <div class="mix-row" style="margin-top:14px; align-items:center;">
+      <span class="mix-label" style="flex:1;">Seed — recreate an exact soundscape</span>
       <input type="text" id="seedInput" class="seed-box" placeholder="random" inputmode="numeric">
     </div>
   </div>
@@ -243,19 +273,21 @@
     Music: 'In This Moment', 'Unraveling', 'Memories Of Stone', 'Wildflowers', 'Penumbra',
     'With These Hands', 'Amberlight', 'Meanwhile', 'At The End Of All Things', 'Echoes' and
     'Incredulity' by Scott Buckley &mdash; released under CC-BY 4.0.
-    <a href="https://www.scottbuckley.com.au" target="_blank" rel="noopener">www.scottbuckley.com.au</a>
+    <a href="https://www.scottbuckley.com.au" target="_blank" rel="noopener">www.scottbuckley.com.au</a><br>
+    Sounds by taavhaap, InspectorJ, tim.kahn, GammaScorpii, Glaneur de sons, klankbeeld, Dynamicell,
+    reinsamba, IcedPhoenix49, caquet and geodylabs &mdash; CC-BY 4.0, via
+    <a href="https://freesound.org" target="_blank" rel="noopener">freesound.org</a>.
+    Other sounds CC0 / public domain.
   </div>
 
   <div class="support" id="support">
-    <div class="support-inner">
-      <h2>Support this quiet thing</h2>
-      <p class="support-text">If Ruhe brought you a moment of calm, you can buy it a coffee.</p>
-      <div class="row">
-        <a class="support-btn" id="kofiBtn" href="#" target="_blank" rel="noopener">☕ Buy me a coffee</a>
-        <a class="support-btn" id="twintBtn" href="#" target="_blank" rel="noopener">Twint</a>
-      </div>
-      <p class="support-hint" id="supportHint">Payment links coming soon.</p>
+    <h2>Support</h2>
+    <p class="support-text">If Ruhe brought you a moment of calm, you can buy it a coffee.</p>
+    <div class="row">
+      <a class="support-btn" id="kofiBtn" href="#" target="_blank" rel="noopener">Buy me a coffee</a>
+      <a class="support-btn" id="twintBtn" href="#" target="_blank" rel="noopener">Twint</a>
     </div>
+    <p class="support-hint" id="supportHint">Payment links coming soon.</p>
   </div>
 </div>
 
@@ -266,8 +298,8 @@
   // ---------------- support links (fill these in later) ----------------
   // Paste your payment links here. Leave as "" to keep a button hidden.
   const SUPPORT = {
-    kofi:  "",   // e.g. "https://ko-fi.com/yourname"
-    twint: ""    // e.g. your Twint payment link / QR page URL
+    kofi:  "https://ko-fi.com/zekaradeci",
+    twint: ""    // paste your link, e.g. "https://pay.raisenow.io/..." (any Twint-capable link)
   };
 
   // ---------------- state ----------------
@@ -1087,7 +1119,7 @@
     if(!buffer) return;
     const d = buffer.getChannelData(0);
     const step = Math.max(1, Math.floor(d.length / W));
-    c2.strokeStyle = 'rgba(245,178,77,0.85)';
+    c2.strokeStyle = 'rgba(185,166,120,0.8)';
     c2.lineWidth = 1;
     c2.beginPath();
     let mx = 0;

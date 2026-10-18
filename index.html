@@ -1093,6 +1093,13 @@
     streamStopped = false;
     playing = true;
     playBtn.innerHTML = '&#9632; Stop';
+    // if the context is still suspended (e.g. share-link auto-play on a
+    // phone), the stream is scheduled but silent — tell the user to tap.
+    setTimeout(()=>{
+      if(liveCtx && liveCtx.state !== 'running' && streamNodes){
+        setStatus('sound is paused by your browser — tap anywhere to start it.');
+      }
+    }, 400);
   }
 
   function stopStreaming(clearExtend){
@@ -1273,6 +1280,12 @@
     resultEl.classList.remove('show');
     hideExtend();
     stopPlayback();
+    // SOUND UNLOCK: browsers only allow audio to start from a user gesture.
+    // Create + resume the AudioContext HERE, synchronously inside the click,
+    // BEFORE any awaits — otherwise the downloads that follow break the
+    // gesture and the piece plays silently (the "no sound" bug).
+    const ctxNow = ensureLiveCtx();
+    if(ctxNow.state === 'suspended'){ try{ ctxNow.resume(); }catch(e){} }
     // seed: use the typed value if valid, else a fresh random one
     const typed = parseInt(seedInput.value, 10);
     const seed = (typed > 0 ? typed : 1 + Math.floor(Math.random()*999999999));
@@ -1375,6 +1388,16 @@
     if(!liveCtx) liveCtx = new (window.AudioContext||window.webkitAudioContext)();
     return liveCtx;
   }
+
+  // UNIVERSAL SOUND UNLOCK: if audio ever starts suspended (share link
+  // auto-play, phone browsers), the first tap anywhere resumes it and the
+  // already-scheduled stream simply becomes audible.
+  function unlockSound(){
+    const c = liveCtx;
+    if(c && c.state === 'suspended'){ try{ c.resume(); }catch(e){} }
+  }
+  document.addEventListener('pointerdown', unlockSound);
+  document.addEventListener('keydown', unlockSound);
 
   playBtn.addEventListener('click', ()=>{
     if(streamNodes){

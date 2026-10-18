@@ -172,6 +172,12 @@
     font-size:0.58rem; letter-spacing:0.26em; text-transform:uppercase;
     color: var(--muted); margin:0 0 10px;
   }
+  .ios-hint{
+    display:none; margin-top: 10px;
+    font-family:'Space Mono', monospace; font-size:0.58rem; line-height:1.7;
+    color: var(--faint); letter-spacing:0.03em;
+  }
+  .ios-hint.show{ display:block; }
   .fav-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
   .fav{
     font-family:'Space Mono', monospace; font-size:0.6rem; letter-spacing:0.02em;
@@ -284,6 +290,7 @@
   <div class="row" style="margin-top:10px;">
     <button class="pill" id="soundTestBtn">Sound test — hear a bell?</button>
   </div>
+  <div class="ios-hint" id="iosHint">iPhone tip: if everything is silent, check the mute switch on the side of the phone — it silences all sounds, even the app.</div>
   <div class="status" id="status"></div>
 
   <div class="extend" id="extendRow">
@@ -1606,6 +1613,13 @@
     });
     setStatus('If you heard three notes, your sound works — press Make my calm.');
   });
+
+  // ---- iPhone hint: only shown on iOS devices ----
+  const iOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if(iOS){
+    document.getElementById('iosHint').classList.add('show');
+  }
 
   // ---- share link: encode the full state into the URL ----
   function buildShareURL(seed){

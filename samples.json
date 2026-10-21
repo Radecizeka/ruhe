@@ -8,7 +8,7 @@
   "night":  ["samples/night-1.mp3", "samples/night-2.mp3", "samples/night-3.mp3"],
   "storm":  ["samples/storm-1.mp3", "samples/storm-2.mp3", "samples/storm-3.mp3", "samples/storm-4.mp3"],
   "cafe":   ["samples/cafe-1.mp3", "samples/cafe-2.mp3"],
-  "birds":  ["samples/birds-2.mp3", "samples/birds-3.mp3"],
+  "birds":  ["samples/birds-2.mp3", "samples/birds-3.mp3", "samples/birds-4.mp3", "samples/birds-5.mp3", "samples/birds-6.mp3"],
   "noise":  ["samples/noise-1.mp3", "samples/noise-3.mp3"],
   "purr":   ["samples/purr-1.mp3", "samples/purr-2.mp3", "samples/purr-3.mp3", "samples/purr-4.mp3"],
   "train":  ["samples/train-1.mp3", "samples/train-2.mp3"],

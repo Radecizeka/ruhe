@@ -372,6 +372,8 @@
   let lastUsedMusic = false;    // whether the last render used real music
   let lastSeed = null;          // seed of the most recent soundscape (for share links)
   let lastTitle = null;         // title of the most recent soundscape
+  let lastMusicBuf = null;      // music track of the previous piece (avoid repeats)
+  let lastSampleBuf = null;     // recording of the previous piece (avoid repeats)
   let plan = null;              // deterministic plan of the current soundscape
   let streamNodes = null;       // live nodes of the current stream
   let streamTimer = null;       // cleanup timer for the stream
@@ -653,7 +655,7 @@
   // Real-sample ambience layer: loops a user-supplied recording under the
   // music. Returns true if a sample was used (so the render knows to skip
   // the synthetic texture). This is the "genuine environment" path.
-  function sampleLayer(ctx, dest, env, t, dur, b, startOff, levelVar){
+  function sampleLayer(ctx, dest, env, t, dur, b, startOff, levelVar, rate){
     const bufs = sampleBuffers[env];
     if(!bufs || !bufs.length) return false;
     // Uses the plan's chosen recording + offset + level, so the live
@@ -671,6 +673,7 @@
     g.connect(dest);
     const s = ctx.createBufferSource(); s.buffer = b; s.loop = true;
     s.loopStart = 0; s.loopEnd = b.duration;
+    if(rate) s.playbackRate.value = rate;
     s.connect(g);
     s.start(t, startOff);
     s.stop(t + dur);
@@ -844,6 +847,10 @@
       p.musicOff = rng() * p.musicBuf.duration;
       p.musicLev = 0.85 + rng()*0.15;
     }
+    // playback-rate variation: the same recording at ±3–5 % speed sounds
+    // like a different take. Kept subtle so pitch stays natural.
+    p.musicRate  = 0.95 + rng()*0.10;                 // 0.95–1.05
+    p.sampleRate = 0.97 + rng()*0.06;                 // 0.97–1.03
     p.rngState = rng.state();                         // for synth fallbacks
     p.hasReal = !!(p.sampleBuf && p.musicBuf);        // streaming-capable
     return p;
@@ -898,7 +905,7 @@
     const chordSec = (60/mood.bpm)*4;
     // real sample ambience if available, otherwise synthesised texture
     lastUsedSamples = sampleLayer(ctx, ambBus, o.env, 0, dur,
-      plan.sampleBuf, plan.sampleOff, plan.sampleLev);
+      plan.sampleBuf, plan.sampleOff, plan.sampleLev, plan.sampleRate);
     if(!lastUsedSamples){
       texture(ctx, ambBus, o.env, 0, dur);
     }
@@ -921,21 +928,25 @@
       // crossfaded looping from a random start point: instead of one plain
       // loop (which clicks at the seam on non-seamless tracks), we alternate
       // overlapping sources with a short crossfade at every loop boundary.
+      // playbackRate gives each render a slightly different take (±5 %).
+      const rate = plan.musicRate || 1;
       const fade = Math.min(3, Math.max(0.5, loopLen*0.15));  // 15% of the track, capped
       const seg = Math.max(1, loopLen - fade);
+      const loopW = loopLen / rate, fadeW = fade / rate, segW = seg / rate;
       let k = 0;
-      for(let st = 0; st < dur; st += seg){
+      for(let st = 0; st < dur; st += segW){
         const s = ctx.createBufferSource(); s.buffer = b;
         s.loop = true; s.loopStart = 0; s.loopEnd = loopLen;
+        s.playbackRate.value = rate;
         const g = ctx.createGain();
-        const end = Math.min(dur, st + loopLen);
+        const end = Math.min(dur, st + loopW);
         g.gain.setValueAtTime(0.0001, Math.max(0, st));
-        g.gain.linearRampToValueAtTime(1, Math.max(st + fade*0.5, st));
-        g.gain.setValueAtTime(1, Math.max(st, end - fade*0.5));
+        g.gain.linearRampToValueAtTime(1, Math.max(st + fadeW*0.5, st));
+        g.gain.setValueAtTime(1, Math.max(st, end - fadeW*0.5));
         g.gain.linearRampToValueAtTime(0.0001, end);
         s.connect(g); g.connect(mg);
         // offset advances with each segment; the loop wraps it around
-        s.start(st, startOff + k*seg);
+        s.start(st, (startOff + k*seg) % loopLen);
         k++;
       }
     } else {
@@ -1049,37 +1060,42 @@
     master.gain.setValueAtTime(0.0001, now);
     master.gain.linearRampToValueAtTime(0.95, now + 2);
 
-    // ---- ambience loop ----
+    // ---- ambience loop (with playback-rate variation) ----
     if(plan.sampleBuf){
       const s = ctx.createBufferSource(); s.buffer = plan.sampleBuf; s.loop = true;
       s.loopStart = 0; s.loopEnd = plan.sampleBuf.duration;
+      s.playbackRate.value = plan.sampleRate || 1;
       const g = ctx.createGain(); g.gain.value = plan.sampleLev;
       s.connect(g); g.connect(ambBus);
       s.start(now, plan.sampleOff);
       s.stop(now + dur + 6);
     }
 
-    // ---- music loop (crossfaded) ----
+    // ---- music loop (crossfaded, with playback-rate variation) ----
     if(plan.musicBuf){
       const b = plan.musicBuf;
+      const r = plan.musicRate || 1;
       const loopLen = b.duration;
       const mg = ctx.createGain(); mg.gain.value = plan.musicLev;
       mg.connect(musicBus);
       const fade = Math.min(3, Math.max(0.5, loopLen*0.15));
-      const seg = Math.max(1, loopLen - fade);
+      const seg = Math.max(1, loopLen - fade);      // buffer seconds per segment
+      // in wall-clock seconds, the loop runs r× faster:
+      const loopW = loopLen / r, fadeW = fade / r, segW = seg / r;
       let k = 0;
-      for(let st = 0; st < dur + 6; st += seg){
+      for(let st = 0; st < dur + 6; st += segW){
         const s = ctx.createBufferSource(); s.buffer = b;
         s.loop = true; s.loopStart = 0; s.loopEnd = loopLen;
+        s.playbackRate.value = r;
         const g = ctx.createGain();
-        const end = now + Math.min(dur + 6, st + loopLen);
+        const end = now + Math.min(dur + 6, st + loopW);
         const t0 = now + st;
         g.gain.setValueAtTime(0.0001, Math.max(now, t0));
-        g.gain.linearRampToValueAtTime(1, t0 + fade*0.5);
-        g.gain.setValueAtTime(1, Math.max(t0 + fade*0.5, end - fade*0.5));
+        g.gain.linearRampToValueAtTime(1, t0 + fadeW*0.5);
+        g.gain.setValueAtTime(1, Math.max(t0 + fadeW*0.5, end - fadeW*0.5));
         g.gain.linearRampToValueAtTime(0.0001, end);
         s.connect(g); g.connect(mg);
-        s.start(t0, plan.musicOff + k*seg);
+        s.start(t0, (plan.musicOff + k*seg) % loopLen);
         s.stop(end + 0.5);
         k++;
       }
@@ -1296,21 +1312,37 @@
     // gesture and the piece plays silently (the "no sound" bug).
     const ctxNow = ensureLiveCtx();
     if(ctxNow.state === 'suspended'){ try{ ctxNow.resume(); }catch(e){} }
-    // seed: use the typed value if valid, else a fresh random one
     const typed = parseInt(seedInput.value, 10);
-    const seed = (typed > 0 ? typed : 1 + Math.floor(Math.random()*999999999));
+    let seed = (typed > 0 ? typed : 1 + Math.floor(Math.random()*999999999));
+    setStatus('loading…');
+    await ensureSamples(opts.env);
+    await ensureMusic(opts.mood);
+
+    // NO-REPEAT: if the user didn't type a seed, re-roll it until either the
+    // music track or the recording differs from the previous piece (up to 6
+    // tries, so short libraries still work). Typed/shared seeds stay exact —
+    // a share link must always reproduce the same piece.
+    if(!(typed > 0)){
+      for(let tries = 0; tries < 6; tries++){
+        const probe = buildPlan(seed, opts);
+        const sameMusic = probe.musicBuf === lastMusicBuf;
+        const sameSample = probe.sampleBuf === lastSampleBuf;
+        if(!(sameMusic && sameSample)) break;
+        seed = 1 + Math.floor(Math.random()*999999999);
+      }
+    }
+
     lastSeed = seed;
     const mood = MOODS[opts.mood];
     // build a title from its own rng, independent of the render's rng
     const r = mulberry32(seed);
     const pickLocal = a => a[Math.floor(r()*a.length)];
     lastTitle = pickLocal(mood.adj) + ' ' + pickLocal(mood.noun);
-    setStatus('loading…');
-    await ensureSamples(opts.env);
-    await ensureMusic(opts.mood);
 
     // deterministic plan: the choices both stream and download share
     plan = buildPlan(seed, opts);
+    lastMusicBuf = plan.musicBuf || null;
+    lastSampleBuf = plan.sampleBuf || null;
 
     const tuned = resolveTuning(opts);
     document.getElementById('nowTitle').textContent = lastTitle;
